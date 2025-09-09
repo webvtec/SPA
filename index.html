@@ -2072,16 +2072,76 @@ function closeMyBookings() {
     }
 
 function getBufferForSelectedServices() {
-  let buffer = 30; // default
+  let buffer = 30; // default buffer in minutes
 
-  const pedicureType = document.getElementById('pedicureType')?.value || "NONE";
-  const manicureType = document.getElementById('manicureType')?.value || "NONE";
-  const nailExtensionType = document.getElementById('nailExtensionType')?.value || "NONE";
+  // Get selected spa services from your booking form
+  const saunaType = document.getElementById('saunaType')?.value || "NONE";
+  const massageType = document.getElementById('massageType')?.value || "NONE";
+  const bodyTreatmentType = document.getElementById('bodyTreatmentType')?.value || "NONE";
+  const nailType = document.getElementById('nailType')?.value || "NONE";
+  const waxingType = document.getElementById('waxingType')?.value || "NONE";
+  const facialType = document.getElementById('facialType')?.value || "NONE";
 
-  // Example buffer logic — adjust if needed
-  if (pedicureType === "Gel Pedicure") buffer = 60;
-  if (manicureType === "Gel Manicure") buffer = 50;
-  if (nailExtensionType !== "NONE") buffer = 40;
+  // Adjust buffer based on selected services
+  // Longer services need bigger buffers for setup/cleanup time
+
+  // Sauna services - minimal buffer needed
+  if (saunaType !== "NONE") {
+    buffer = Math.max(buffer, 20);
+  }
+
+  // Massage services - need setup/cleanup time
+  if (massageType !== "NONE") {
+    if (massageType.includes("Hot Stone") || massageType.includes("Couples")) {
+      buffer = Math.max(buffer, 45); // More setup time for special massages
+    } else {
+      buffer = Math.max(buffer, 35);
+    }
+  }
+
+  // Body treatments - often messy, need cleanup time
+  if (bodyTreatmentType !== "NONE") {
+    if (bodyTreatmentType.includes("Body Wrap") || bodyTreatmentType.includes("Cellulite")) {
+      buffer = Math.max(buffer, 40); // Wraps need more cleanup
+    } else {
+      buffer = Math.max(buffer, 35);
+    }
+  }
+
+  // Nail services - tools need sanitizing
+  if (nailType !== "NONE") {
+    if (nailType.includes("Acrylic") || nailType.includes("Combo")) {
+      buffer = Math.max(buffer, 45); // Complex nail work needs more buffer
+    } else {
+      buffer = Math.max(buffer, 35);
+    }
+  }
+
+  // Waxing services - need room cleanup
+  if (waxingType !== "NONE") {
+    if (waxingType.includes("Brazilian") || waxingType.includes("Full Leg")) {
+      buffer = Math.max(buffer, 40); // Extensive waxing needs more cleanup
+    } else {
+      buffer = Math.max(buffer, 30);
+    }
+  }
+
+  // Facial services - equipment needs sanitizing
+  if (facialType !== "NONE") {
+    if (facialType.includes("Chemical Peel") || facialType.includes("Microdermabrasion")) {
+      buffer = Math.max(buffer, 45); // Medical-grade treatments need more buffer
+    } else {
+      buffer = Math.max(buffer, 35);
+    }
+  }
+
+  // If multiple services are selected, increase buffer slightly
+  const serviceCount = [saunaType, massageType, bodyTreatmentType, nailType, waxingType, facialType]
+    .filter(service => service !== "NONE").length;
+  
+  if (serviceCount > 1) {
+    buffer += 10; // Extra time for transitioning between services
+  }
 
   return buffer;
 }
