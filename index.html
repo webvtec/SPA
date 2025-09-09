@@ -659,7 +659,7 @@
 
     
 
-<!-- Updated Booking Section -->
+<!-- Updated Booking Section for Spa Services -->
 <div class="content-section" id="bookingSection">
 <h1>BOOK APPOINTMENT</h1>
 <form onsubmit="submitBooking(event)">
@@ -686,66 +686,89 @@
 <option value="">COMPLETE FORM TO SEE AVAILABLE SLOTS</option>
 </select>
 
-<!-- Manicure & Pedicure Services -->
-<label for="manicurePedicureType">Manicure & Pedicure:</label>
-<select id="manicurePedicureType" onchange="showEstimateTime(); loadAvailableSlots();">
+<!-- Sauna Services -->
+<label for="saunaType">Sauna Services:</label>
+<select id="saunaType" onchange="showEstimateTime(); loadAvailableSlots();">
 <option value="NONE">NONE</option>
-<option value="Female Manicure">Female Manicure — $2,000+</option>
-<option value="Female Pedicure">Female Pedicure — $3,000</option>
-<option value="Men's Manicure">Men's Manicure — $2,000</option>
-<option value="Men's Pedicure">Men's Pedicure — $5,000</option>
+<option value="Traditional Sauna Session (30 min)">Traditional Sauna Session (30 min) — $3,500</option>
+<option value="Infrared Sauna Session (45 min)">Infrared Sauna Session (45 min) — $4,500</option>
+<option value="Steam Room Session (30 min)">Steam Room Session (30 min) — $3,000</option>
+<option value="Sauna & Steam Combo">Sauna & Steam Combo — $6,000</option>
 </select>
 
-<!-- Polish & Art Services -->
-<label for="polishArtType">Polish & Art:</label>
-<select id="polishArtType" onchange="showEstimateTime(); loadAvailableSlots();">
+<!-- Massage Services -->
+<label for="massageType">Massage Services:</label>
+<select id="massageType" onchange="showEstimateTime(); loadAvailableSlots();">
 <option value="NONE">NONE</option>
-<option value="Gel Polish Fingers">Gel Polish Fingers — $3,000</option>
-<option value="Gel Polish Toes">Gel Polish Toes — $2,000+</option>
-<option value="French Toes">French Toes — $2,500+</option>
-<option value="Hand Painted French">Hand Painted French — $2,000+</option>
-<option value="Nail Art">Nail Art — $300+</option>
+<option value="Swedish Massage (60 min)">Swedish Massage (60 min) — $8,500</option>
+<option value="Deep Tissue Massage (60 min)">Deep Tissue Massage (60 min) — $9,500</option>
+<option value="Hot Stone Massage (75 min)">Hot Stone Massage (75 min) — $12,000</option>
+<option value="Aromatherapy Massage (60 min)">Aromatherapy Massage (60 min) — $10,000</option>
+<option value="Couples Massage (60 min)">Couples Massage (60 min) — $16,000</option>
+<option value="Prenatal Massage (60 min)">Prenatal Massage (60 min) — $9,000</option>
+<option value="Sports Massage (60 min)">Sports Massage (60 min) — $9,500</option>
+<option value="Reflexology (45 min)">Reflexology (45 min) — $7,000</option>
 </select>
 
-<!-- Acrylic Services -->
-<label for="acrylicType">Acrylic (Hands & Toes):</label>
-<select id="acrylicType" onchange="showEstimateTime(); loadAvailableSlots();">
+<!-- Body Treatments -->
+<label for="bodyTreatmentType">Body Treatments:</label>
+<select id="bodyTreatmentType" onchange="showEstimateTime(); loadAvailableSlots();">
 <option value="NONE">NONE</option>
-<option value="XL Full Set">XL Full Set — $8,000+</option>
-<option value="Long Full Set">Long Full Set — $7,000+</option>
-<option value="Medium Full Set">Medium Full Set — $6,000+</option>
-<option value="Short Full Set">Short Full Set — $5,000+</option>
-<option value="Oval/Almond Medium">Oval/Almond Medium — $7,000+</option>
-<option value="Oval Faded French (Medium)">Oval Faded French (Medium) — $7,500+</option>
-<option value="Coffin">Coffin — $6,000+</option>
-<option value="Nail Overlay (Short)">Nail Overlay (Short) — $4,500+</option>
-<option value="Overlay & Gel Polish">Overlay & Gel Polish — $7,000+</option>
-<option value="Refill & Gel Polish">Refill & Gel Polish — $5,500+</option>
-<option value="Refill My Work (2–3 Weeks)">Refill My Work (2–3 Weeks) — $3,000+</option>
-<option value="Reshape & Cutdown Nails">Reshape & Cutdown Nails — $1,200+</option>
-<option value="Acrylic All Toes">Acrylic All Toes — $4,000+</option>
-<option value="Acrylic Big Toes">Acrylic Big Toes — $2,500+</option>
-<option value="Fix Acrylic Toes">Fix Acrylic Toes — $1,500+</option>
-<option value="Refill Toes">Refill Toes — $2,000+</option>
+<option value="Full Body Exfoliation">Full Body Exfoliation — $8,000</option>
+<option value="Body Wrap - Detox">Body Wrap - Detox — $10,500</option>
+<option value="Body Wrap - Hydrating">Body Wrap - Hydrating — $9,500</option>
+<option value="Cellulite Treatment">Cellulite Treatment — $12,000</option>
+<option value="Back Facial">Back Facial — $7,500</option>
+<option value="Spray Tan">Spray Tan — $6,000</option>
+<option value="Body Polish & Moisturize">Body Polish & Moisturize — $7,000</option>
 </select>
 
-<!-- Gel Services -->
-<label for="gelType">Gel Services:</label>
-<select id="gelType" onchange="showEstimateTime(); loadAvailableSlots();">
+<!-- Nail Services -->
+<label for="nailType">Nail Services:</label>
+<select id="nailType" onchange="showEstimateTime(); loadAvailableSlots();">
 <option value="NONE">NONE</option>
-<option value="Gel X (Long)">Gel X (Long) — $7,500+</option>
-<option value="Gel X (Medium)">Gel X (Medium) — $6,500+</option>
-<option value="Rebalanced Structured Gel">Rebalanced Structured Gel — $5,500+</option>
+<option value="Classic Manicure">Classic Manicure — $3,500</option>
+<option value="Gel Manicure">Gel Manicure — $4,500</option>
+<option value="Acrylic Full Set">Acrylic Full Set — $6,500</option>
+<option value="Classic Pedicure">Classic Pedicure — $4,000</option>
+<option value="Gel Pedicure">Gel Pedicure — $5,500</option>
+<option value="Manicure & Pedicure Combo">Manicure & Pedicure Combo — $7,000</option>
+<option value="Nail Art (per nail)">Nail Art (per nail) — $500</option>
+<option value="Nail Repair">Nail Repair — $1,500</option>
 </select>
 
-<!-- Other Services -->
-<label for="otherType">Other Services:</label>
-<select id="otherType" onchange="showEstimateTime(); loadAvailableSlots();">
+<!-- Waxing Services -->
+<label for="waxingType">Waxing Services:</label>
+<select id="waxingType" onchange="showEstimateTime(); loadAvailableSlots();">
 <option value="NONE">NONE</option>
-<option value="Soak Off Acrylic Fingers & Clean Up">Soak Off Acrylic Fingers & Clean Up — $1,500+</option>
-<option value="Soak Off Toes">Soak Off Toes — $500+</option>
-<option value="Gem Application">Gem Application — $300+</option>
-<option value="Hair Brush">Hair Brush — $300+</option>
+<option value="Eyebrow Wax">Eyebrow Wax — $2,000</option>
+<option value="Upper Lip Wax">Upper Lip Wax — $1,500</option>
+<option value="Chin Wax">Chin Wax — $1,800</option>
+<option value="Full Face Wax">Full Face Wax — $4,500</option>
+<option value="Underarm Wax">Underarm Wax — $3,000</option>
+<option value="Half Leg Wax">Half Leg Wax — $4,500</option>
+<option value="Full Leg Wax">Full Leg Wax — $7,500</option>
+<option value="Bikini Line Wax">Bikini Line Wax — $4,000</option>
+<option value="Brazilian Wax">Brazilian Wax — $8,500</option>
+<option value="Back Wax">Back Wax — $6,000</option>
+<option value="Chest Wax">Chest Wax — $5,500</option>
+</select>
+
+<!-- Facial Services -->
+<label for="facialType">Facial Services:</label>
+<select id="facialType" onchange="showEstimateTime(); loadAvailableSlots();">
+<option value="NONE">NONE</option>
+<option value="Classic European Facial">Classic European Facial — $7,500</option>
+<option value="Deep Cleansing Facial">Deep Cleansing Facial — $8,500</option>
+<option value="Anti-Aging Facial">Anti-Aging Facial — $10,500</option>
+<option value="Hydrating Facial">Hydrating Facial — $8,000</option>
+<option value="Acne Treatment Facial">Acne Treatment Facial — $9,000</option>
+<option value="Chemical Peel - Light">Chemical Peel - Light — $12,000</option>
+<option value="Chemical Peel - Medium">Chemical Peel - Medium — $15,000</option>
+<option value="Microdermabrasion">Microdermabrasion — $11,000</option>
+<option value="Oxygen Facial">Oxygen Facial — $13,500</option>
+<option value="LED Light Therapy">LED Light Therapy — $9,500</option>
+<option value="Eye Treatment">Eye Treatment — $5,500</option>
 </select>
 
 <p id="estimateTimeMessage" style="color: #FE5DC7; font-weight: bold;"></p>
@@ -768,7 +791,7 @@
 </form>
 <p id="bookingMessage"></p>
 </div>
-
+    
     
 <div class="content-section" id="reviewsSection">
 <h1 style="text-align:center; color:#E58BBE;">CLIENT REVIEWS</h1>
@@ -1379,37 +1402,43 @@ const businessHours = {
 
 
 
+// Updated showEstimateTime function for spa services
 function showEstimateTime() {
-  const manicurePedicureType = document.getElementById('manicurePedicureType').value;
-  const polishArtType = document.getElementById('polishArtType').value;
-  const acrylicType = document.getElementById('acrylicType').value;
-  const gelType = document.getElementById('gelType').value;
-  const otherType = document.getElementById('otherType').value;
+  const saunaType = document.getElementById('saunaType').value;
+  const massageType = document.getElementById('massageType').value;
+  const bodyTreatmentType = document.getElementById('bodyTreatmentType').value;
+  const nailType = document.getElementById('nailType').value;
+  const waxingType = document.getElementById('waxingType').value;
+  const facialType = document.getElementById('facialType').value;
   const estimateMessage = document.getElementById('estimateTimeMessage');
 
   // Calculate total duration
   let totalMinutes = 0;
   let selectedServices = [];
 
-  if (manicurePedicureType !== 'NONE') {
-    totalMinutes += serviceDurations[manicurePedicureType] || 60;
-    selectedServices.push(manicurePedicureType);
+  if (saunaType !== 'NONE') {
+    totalMinutes += serviceDurations[saunaType] || 30;
+    selectedServices.push(saunaType);
   }
-  if (polishArtType !== 'NONE') {
-    totalMinutes += serviceDurations[polishArtType] || 30;
-    selectedServices.push(polishArtType);
+  if (massageType !== 'NONE') {
+    totalMinutes += serviceDurations[massageType] || 60;
+    selectedServices.push(massageType);
   }
-  if (acrylicType !== 'NONE') {
-    totalMinutes += serviceDurations[acrylicType] || 60;
-    selectedServices.push(acrylicType);
+  if (bodyTreatmentType !== 'NONE') {
+    totalMinutes += serviceDurations[bodyTreatmentType] || 60;
+    selectedServices.push(bodyTreatmentType);
   }
-  if (gelType !== 'NONE') {
-    totalMinutes += serviceDurations[gelType] || 60;
-    selectedServices.push(gelType);
+  if (nailType !== 'NONE') {
+    totalMinutes += serviceDurations[nailType] || 45;
+    selectedServices.push(nailType);
   }
-  if (otherType !== 'NONE') {
-    totalMinutes += serviceDurations[otherType] || 30;
-    selectedServices.push(otherType);
+  if (waxingType !== 'NONE') {
+    totalMinutes += serviceDurations[waxingType] || 30;
+    selectedServices.push(waxingType);
+  }
+  if (facialType !== 'NONE') {
+    totalMinutes += serviceDurations[facialType] || 60;
+    selectedServices.push(facialType);
   }
 
   if (selectedServices.length === 0) {
@@ -1432,7 +1461,7 @@ function showEstimateTime() {
 
   estimateMessage.innerHTML = `Estimated Time: ${timeDisplay}`;
 }
-    
+
 
     function normalizeTimeStr(timeStr) {
   if (!timeStr) return null;
@@ -1518,6 +1547,7 @@ function generateBookingNumber(name) {
 }
 
 
+// Updated submitBooking function for spa services
 function submitBooking(event) {
   event.preventDefault();
 
@@ -1534,19 +1564,21 @@ function submitBooking(event) {
   const date = document.getElementById('date').value;
   const time = document.getElementById('selectedTime').value;
 
-  // REPLACE THIS PART - collect all services
-  const manicurePedicureType = document.getElementById('manicurePedicureType').value;
-  const polishArtType = document.getElementById('polishArtType').value;
-  const acrylicType = document.getElementById('acrylicType').value;
-  const gelType = document.getElementById('gelType').value;
-  const otherType = document.getElementById('otherType').value;
+  // Collect all spa services
+  const saunaType = document.getElementById('saunaType').value;
+  const massageType = document.getElementById('massageType').value;
+  const bodyTreatmentType = document.getElementById('bodyTreatmentType').value;
+  const nailType = document.getElementById('nailType').value;
+  const waxingType = document.getElementById('waxingType').value;
+  const facialType = document.getElementById('facialType').value;
 
   let services = [];
-  if (manicurePedicureType !== 'NONE') services.push(manicurePedicureType);
-  if (polishArtType !== 'NONE') services.push(polishArtType);
-  if (acrylicType !== 'NONE') services.push(acrylicType);
-  if (gelType !== 'NONE') services.push(gelType);
-  if (otherType !== 'NONE') services.push(otherType);
+  if (saunaType !== 'NONE') services.push(saunaType);
+  if (massageType !== 'NONE') services.push(massageType);
+  if (bodyTreatmentType !== 'NONE') services.push(bodyTreatmentType);
+  if (nailType !== 'NONE') services.push(nailType);
+  if (waxingType !== 'NONE') services.push(waxingType);
+  if (facialType !== 'NONE') services.push(facialType);
 
   const service = services.join(', ');
 
@@ -1581,14 +1613,14 @@ function submitBooking(event) {
         day: "numeric",
       });
 
-      const message = `📆 NEW NAILS BOOKING
+      const message = `🏨 NEW SPA BOOKING
 
-🔢 Booking #: ${bookingNumber}
+📢 Booking #: ${bookingNumber}
 👤 Name: ${name}
 📞 Phone: ${phone}
-📆 Date: ${formattedDate}
+📅 Date: ${formattedDate}
 ⏰ Time: ${time}
-💅 Service: ${service}
+🧘‍♀️ Service: ${service}
 ⏱️ Duration: ${Math.floor(duration/60)}h ${duration%60}m`;
 
       const telegramBotToken = "7638261664:AAGm0MNVQxN0hlW1bhXBRf-kSRuMgRkCLC8";
@@ -2056,68 +2088,102 @@ function getBufferForSelectedServices() {
 
 
 const serviceDurations = {
-  // Current service names from HTML dropdowns
-  "Female Manicure": 60,
-  "Female Pedicure": 90,
-  "Men's Manicure": 60,
-  "Men's Pedicure": 120,
-  "Gel Polish Fingers": 45,
-  "Gel Polish Toes": 60,
-  "French Toes": 60,
-  "Hand Painted French": 60,
-  "Nail Art": 30,
-  "XL Full Set": 150,
-  "Long Full Set": 135,
-  "Medium Full Set": 120,
-  "Short Full Set": 105,
-  "Oval/Almond Medium": 135,
-  "Oval Faded French (Medium)": 150,
-  "Coffin": 120,
-  "Nail Overlay (Short)": 90,
-  "Overlay & Gel Polish": 135,
-  "Refill & Gel Polish": 105,
-  "Refill My Work (2–3 Weeks)": 75,
-  "Reshape & Cutdown Nails": 45,
-  "Acrylic All Toes": 90,
-  "Acrylic Big Toes": 60,
-  "Fix Acrylic Toes": 45,
-  "Refill Toes": 60,
-  "Gel X (Long)": 150,
-  "Gel X (Medium)": 135,
-  "Rebalanced Structured Gel": 105,
-  "Soak Off Acrylic Fingers & Clean Up": 45,
-  "Soak Off Toes": 30,
-  "Gem Application": 15,
-  "Hair Brush": 15,
+  // Sauna Services
+  "Traditional Sauna Session (30 min)": 30,
+  "Infrared Sauna Session (45 min)": 45,
+  "Steam Room Session (30 min)": 30,
+  "Sauna & Steam Combo": 60,
+  
+  // Massage Services
+  "Swedish Massage (60 min)": 60,
+  "Deep Tissue Massage (60 min)": 60,
+  "Hot Stone Massage (75 min)": 75,
+  "Aromatherapy Massage (60 min)": 60,
+  "Couples Massage (60 min)": 60,
+  "Prenatal Massage (60 min)": 60,
+  "Sports Massage (60 min)": 60,
+  "Reflexology (45 min)": 45,
+  
+  // Body Treatments
+  "Full Body Exfoliation": 75,
+  "Body Wrap - Detox": 90,
+  "Body Wrap - Hydrating": 90,
+  "Cellulite Treatment": 60,
+  "Back Facial": 60,
+  "Spray Tan": 30,
+  "Body Polish & Moisturize": 60,
+  
+  // Nail Services
+  "Classic Manicure": 45,
+  "Gel Manicure": 60,
+  "Acrylic Full Set": 120,
+  "Classic Pedicure": 60,
+  "Gel Pedicure": 75,
+  "Manicure & Pedicure Combo": 105,
+  "Nail Art (per nail)": 15,
+  "Nail Repair": 30,
+  
+  // Waxing Services
+  "Eyebrow Wax": 15,
+  "Upper Lip Wax": 10,
+  "Chin Wax": 15,
+  "Full Face Wax": 30,
+  "Underarm Wax": 20,
+  "Half Leg Wax": 30,
+  "Full Leg Wax": 60,
+  "Bikini Line Wax": 30,
+  "Brazilian Wax": 45,
+  "Back Wax": 45,
+  "Chest Wax": 30,
+  
+  // Facial Services
+  "Classic European Facial": 75,
+  "Deep Cleansing Facial": 75,
+  "Anti-Aging Facial": 90,
+  "Hydrating Facial": 75,
+  "Acne Treatment Facial": 75,
+  "Chemical Peel - Light": 60,
+  "Chemical Peel - Medium": 75,
+  "Microdermabrasion": 60,
+  "Oxygen Facial": 90,
+  "LED Light Therapy": 45,
+  "Eye Treatment": 30,
+  
   "NONE": 0
 };
 
 
+// Updated getSelectedServiceDuration function for spa services
 function getSelectedServiceDuration() {
-  const pedicure = document.getElementById('pedicureType')?.value || "NONE";
-  const manicure = document.getElementById('manicureType')?.value || "NONE";
-  const nailExtension = document.getElementById('nailExtensionType')?.value || "NONE";
+  const saunaType = document.getElementById('saunaType')?.value || "NONE";
+  const massageType = document.getElementById('massageType')?.value || "NONE";
+  const bodyTreatmentType = document.getElementById('bodyTreatmentType')?.value || "NONE";
+  const nailType = document.getElementById('nailType')?.value || "NONE";
+  const waxingType = document.getElementById('waxingType')?.value || "NONE";
+  const facialType = document.getElementById('facialType')?.value || "NONE";
 
   let totalDuration = 0;
 
-  // Add pedicure time
-  if (pedicure !== "NONE") {
-    totalDuration += serviceDurations[pedicure] || 60;
+  if (saunaType !== "NONE") {
+    totalDuration += serviceDurations[saunaType] || 30;
+  }
+  if (massageType !== "NONE") {
+    totalDuration += serviceDurations[massageType] || 60;
+  }
+  if (bodyTreatmentType !== "NONE") {
+    totalDuration += serviceDurations[bodyTreatmentType] || 60;
+  }
+  if (nailType !== "NONE") {
+    totalDuration += serviceDurations[nailType] || 45;
+  }
+  if (waxingType !== "NONE") {
+    totalDuration += serviceDurations[waxingType] || 30;
+  }
+  if (facialType !== "NONE") {
+    totalDuration += serviceDurations[facialType] || 60;
   }
 
-  // Add manicure time
-  if (manicure !== "NONE") {
-    totalDuration += serviceDurations[manicure] || 60;
-  }
-
-  // Add extension time (this is additional to manicure/pedicure)
-  if (nailExtension !== "NONE") {
-    const extensionKey = `Extension_${nailExtension}`;
-    totalDuration += serviceDurations[extensionKey] || 60;
-  }
-
-  // Minimum service time
-  return totalDuration || 60;
+  return totalDuration || 60; // minimum 1 hour
 }
 
 
@@ -2174,20 +2240,23 @@ function getSelectedServiceDuration() {
 }
 
 
-    async function loadAvailableSlots() {
+    // Updated loadAvailableSlots function for spa services
+async function loadAvailableSlots() {
   const date = document.getElementById('date').value;
-  const manicurePedicureType = document.getElementById('manicurePedicureType')?.value || "NONE";
-  const polishArtType = document.getElementById('polishArtType')?.value || "NONE";
-  const acrylicType = document.getElementById('acrylicType')?.value || "NONE";
-  const gelType = document.getElementById('gelType')?.value || "NONE";
-  const otherType = document.getElementById('otherType')?.value || "NONE";
+  const saunaType = document.getElementById('saunaType')?.value || "NONE";
+  const massageType = document.getElementById('massageType')?.value || "NONE";
+  const bodyTreatmentType = document.getElementById('bodyTreatmentType')?.value || "NONE";
+  const nailType = document.getElementById('nailType')?.value || "NONE";
+  const waxingType = document.getElementById('waxingType')?.value || "NONE";
+  const facialType = document.getElementById('facialType')?.value || "NONE";
 
   const timeSelect = document.getElementById('selectedTime');
   timeSelect.innerHTML = "<option value=''>-- Select a time --</option>";
 
   // Must have a date + at least one service
-  if (!date || (manicurePedicureType === "NONE" && polishArtType === "NONE" && 
-      acrylicType === "NONE" && gelType === "NONE" && otherType === "NONE")) {
+  if (!date || (saunaType === "NONE" && massageType === "NONE" && 
+      bodyTreatmentType === "NONE" && nailType === "NONE" && 
+      waxingType === "NONE" && facialType === "NONE")) {
     timeSelect.innerHTML = "<option value=''>COMPLETE FORM TO SEE AVAILABLE SLOTS</option>";
     return;
   }
@@ -2206,7 +2275,6 @@ function getSelectedServiceDuration() {
   const closeMinutes = convertToMinutes(business.close);
 
   try {
-    // Rest of the function remains the same...
     const snapshot = await db.collection("bookings")
       .where("date", "==", date)
       .get();
@@ -2235,7 +2303,7 @@ function getSelectedServiceDuration() {
       }
     });
 
-    // Generate slots every 5 minutes
+    // Generate slots every 5 minutes (better for spa bookings)
     for (let t = openMinutes; t <= closeMinutes - duration; t += 5) {
       const end = t + duration;
       let conflict = bookings.some(b => !(end <= b.start || t >= b.end)) ||
@@ -2267,32 +2335,8 @@ function getSelectedServiceDuration() {
     console.error("Error loading slots:", err);
     timeSelect.innerHTML = "<option value=''>Error loading slots</option>";
   }
-    }
-    
-
-
-// Welcome Modal Functions
-function selectNailService() {
-  // Close the welcome modal so the site is visible
-  document.getElementById("welcomeModal").style.display = "none";
-  showSection('gallerySection');
-
-  // Push state so back button reopens welcome modal
-  history.pushState({page: "hair"}, "", "");
 }
 
-function selectHairService() {
-  // Push state before redirecting
-  history.pushState({page: "nails"}, "", "");
-  window.location.href = "https://webvtec.github.io/SLAYED-BY-RISSA-HAIRCARE/index.html";
-}
-
-// Listen for back button
-window.onpopstate = function(event) {
-  // Always bring back the welcome modal
-  document.getElementById("welcomeModal").style.display = "flex";
-};
-    
     
 // Shopping cart functionality
 let cart = [];
