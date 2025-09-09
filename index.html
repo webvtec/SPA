@@ -1298,16 +1298,6 @@ function selectPeriod(period) {
   confirmation.style.marginBottom = '10px';
 }
 
-    function showExtensionLengthOptions() {
-  const extensionType = document.getElementById('nailExtensionType').value;
-  const lengthContainer = document.getElementById('extensionLengthContainer');
-
-  if (extensionType !== 'NONE') {
-    lengthContainer.style.display = 'block';
-  } else {
-    lengthContainer.style.display = 'none';
-  }
-}
 
   function loadGallery(containerId) {
   const galleryContainer = document.getElementById(containerId);
@@ -2082,8 +2072,6 @@ function getBufferForSelectedServices() {
   const waxingType = document.getElementById('waxingType')?.value || "NONE";
   const facialType = document.getElementById('facialType')?.value || "NONE";
 
-  // Adjust buffer based on selected services
-  // Longer services need bigger buffers for setup/cleanup time
 
   // Sauna services - minimal buffer needed
   if (saunaType !== "NONE") {
@@ -2268,35 +2256,6 @@ function isTimeSlotInPast(selectedDate, timeString) {
   
   // Only block slots that have already started
   return timeMinutes <= currentMinutes;
-}
-
-// Updated getSelectedServiceDuration to properly sum multiple services
-function getSelectedServiceDuration() {
-  const manicurePedicureType = document.getElementById('manicurePedicureType')?.value || "NONE";
-  const polishArtType = document.getElementById('polishArtType')?.value || "NONE";
-  const acrylicType = document.getElementById('acrylicType')?.value || "NONE";
-  const gelType = document.getElementById('gelType')?.value || "NONE";
-  const otherType = document.getElementById('otherType')?.value || "NONE";
-
-  let totalDuration = 0;
-
-  if (manicurePedicureType !== "NONE") {
-    totalDuration += serviceDurations[manicurePedicureType] || 60;
-  }
-  if (polishArtType !== "NONE") {
-    totalDuration += serviceDurations[polishArtType] || 30;
-  }
-  if (acrylicType !== "NONE") {
-    totalDuration += serviceDurations[acrylicType] || 60;
-  }
-  if (gelType !== "NONE") {
-    totalDuration += serviceDurations[gelType] || 60;
-  }
-  if (otherType !== "NONE") {
-    totalDuration += serviceDurations[otherType] || 30;
-  }
-
-  return totalDuration || 60; // minimum 1 hour
 }
 
 
