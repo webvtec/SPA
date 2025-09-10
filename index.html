@@ -2083,10 +2083,13 @@ function getSelectedServices() {
   return services.length > 0 ? services.join(', ') : 'No services selected';
 }
 
-// Chatbot Configuration - EASILY CUSTOMIZABLE FOR OTHER BUSINESSES
+
+  
+// Enhanced Chatbot Configuration - EASILY CUSTOMIZABLE FOR OTHER BUSINESSES
 const CHATBOT_CONFIG = {
   businessName: "NAILUXE NAILZ BY NAVIA",
   location: "Shop #4, 1 Wesley road cheago plaza, Angellace beauty salon, Mandeville, Jamaica",
+  phone: "876-342-2293",
   openingHours: {
     Monday: "9:00 AM - 6:00 PM",
     Tuesday: "Closed",
@@ -2099,6 +2102,11 @@ const CHATBOT_CONFIG = {
   socialMedia: {
     instagram: "@nailz_by_navia",
     tiktok: "@nailzbynavia"
+  },
+  policies: {
+    reschedule: "You can reschedule appointments, but not later than 24 hours before your scheduled time.",
+    discounts: "We don't currently offer discounts for recurring clients.",
+    inspoImages: "You can't send inspiration images through this chat, but please bring your inspo picture with you to show upon arrival."
   },
   services: {
     "Manicure & Pedicure": [
@@ -2130,7 +2138,14 @@ const CHATBOT_CONFIG = {
   }
 };
 
-// Chatbot Functions
+// Conversation context for follow-ups
+let chatContext = {
+  lastTopic: null,
+  lastService: null,
+  expectingFollowUp: false
+};
+
+// Enhanced Chatbot Functions
 function toggleChat() {
   const window = document.getElementById('chatbot-window');
   const icon = document.getElementById('chatbot-icon');
@@ -2173,7 +2188,7 @@ function sendChatMessage() {
     hideTypingIndicator();
     const response = generateChatResponse(message);
     addChatMessage(response, 'bot');
-  }, 1000 + Math.random() * 1000);
+  }, 800 + Math.random() * 800);
 }
 
 function addChatMessage(message, sender) {
@@ -2214,7 +2229,7 @@ function hideTypingIndicator() {
   }
 }
 
-// Simple spell check function
+// Enhanced spell check and text normalization
 function normalizeText(text) {
   const corrections = {
     'hrs': 'hours', 'hr': 'hour', 'opning': 'opening', 'oepn': 'open',
@@ -2222,138 +2237,243 @@ function normalizeText(text) {
     'pric': 'price', 'cost': 'price', 'instgram': 'instagram', 'tiktoc': 'tiktok',
     'bokking': 'booking', 'acount': 'account', 'apointment': 'appointment',
     'mancure': 'manicure', 'pedicur': 'pedicure', 'acrilic': 'acrylic',
-    'nales': 'nails', 'locaton': 'location', 'adress': 'address'
+    'nales': 'nails', 'locaton': 'location', 'adress': 'address',
+    'reschedual': 'reschedule', 'reshedule': 'reschedule', 'contac': 'contact',
+    'discunt': 'discount', 'discont': 'discount', 'inspiraton': 'inspiration',
+    'inspo': 'inspiration', 'pic': 'picture', 'foto': 'photo'
   };
   
   let normalized = text.toLowerCase();
   Object.entries(corrections).forEach(([wrong, correct]) => {
-    normalized = normalized.replace(new RegExp(wrong, 'g'), correct);
+    normalized = normalized.replace(new RegExp(`\\b${wrong}\\b`, 'g'), correct);
   });
   
   return normalized;
 }
 
+// Intelligent service matching
+function findMatchingService(text) {
+  const allServices = Object.values(CHATBOT_CONFIG.services).flat();
+  
+  // Direct name match
+  for (let service of allServices) {
+    const serviceName = service.name.toLowerCase();
+    if (text.includes(serviceName)) {
+      return service;
+    }
+  }
+  
+  // Keyword matching with scoring
+  const keywords = {
+    'manicure': ['manicure', 'mani'],
+    'pedicure': ['pedicure', 'pedi'],
+    'gel': ['gel', 'polish'],
+    'acrylic': ['acrylic', 'acryl', 'full set', 'set'],
+    'french': ['french'],
+    'art': ['art', 'design'],
+    'xl': ['xl', 'extra large'],
+    'long': ['long'],
+    'medium': ['medium', 'med'],
+    'short': ['short'],
+    'coffin': ['coffin'],
+    'overlay': ['overlay']
+  };
+  
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  for (let service of allServices) {
+    let score = 0;
+    const serviceName = service.name.toLowerCase();
+    
+    Object.entries(keywords).forEach(([key, terms]) => {
+      if (serviceName.includes(key)) {
+        terms.forEach(term => {
+          if (text.includes(term)) score += 1;
+        });
+      }
+    });
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = service;
+    }
+  }
+  
+  return bestScore > 0 ? bestMatch : null;
+}
+
+// Context-aware response system
+function isFollowUpQuestion(text) {
+  const followUpIndicators = [
+    'what about', 'how about', 'and', 'also', 'too', 'as well',
+    'other', 'different', 'another', 'else', 'more', 'any'
+  ];
+  
+  return followUpIndicators.some(indicator => text.includes(indicator)) && 
+         text.split(' ').length < 10; // Short questions are likely follow-ups
+}
+
 function generateChatResponse(message) {
   const normalized = normalizeText(message);
   
+  // Use reasoning engine to analyze the question
+  const analysis = ReasoningEngine.analyzeIntent(normalized, chatContext);
+  const matchedService = findMatchingService(normalized);
+  
+  // Handle follow-up questions first
+  if (chatContext.expectingFollowUp && isFollowUpQuestion(normalized)) {
+    chatContext.expectingFollowUp = false;
+    
+    if (chatContext.lastTopic === 'services' && analysis.primary === 'pricing') {
+      return "All our service prices are listed on the booking page. Prices start from the amounts shown but may vary based on complexity and design requirements.";
+    }
+    
+    if (chatContext.lastTopic === 'booking' && normalized.match(/cancel|change|reschedule/)) {
+      chatContext.lastTopic = 'reschedule';
+      return CHATBOT_CONFIG.policies.reschedule;
+    }
+  }
+  
+  // Use reasoning engine for intelligent responses
+  const intelligentResponse = ReasoningEngine.generateResponse(analysis.primary, normalized, matchedService, chatContext);
+  if (intelligentResponse) {
+    chatContext.lastTopic = analysis.primary;
+    if (analysis.primary === 'pricing' || analysis.primary === 'duration') {
+      chatContext.lastService = matchedService;
+    }
+    return intelligentResponse;
+  }
+  
+  // Pattern-based responses for specific queries
+  
   // Greeting responses
   if (normalized.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
-    return `Hello! Welcome to ${CHATBOT_CONFIG.businessName}! How can I assist you today? 😊`;
+    chatContext.lastTopic = 'greeting';
+    return `Hello! Welcome to ${CHATBOT_CONFIG.businessName}! How can I assist you today?`;
+  }
+  
+  // Inspiration images
+  if (normalized.match(/inspo|inspiration|picture|image|photo|send.*pic/)) {
+    chatContext.lastTopic = 'inspo';
+    return CHATBOT_CONFIG.policies.inspoImages;
+  }
+  
+  // Rescheduling
+  if (normalized.match(/reschedule|change.*appointment|move.*appointment/)) {
+    chatContext.lastTopic = 'reschedule';
+    return CHATBOT_CONFIG.policies.reschedule;
+  }
+  
+  // Discounts
+  if (normalized.match(/discount|deal|recurring|regular|loyal/)) {
+    chatContext.lastTopic = 'discount';
+    return CHATBOT_CONFIG.policies.discounts;
   }
   
   // Opening hours
-  if (normalized.includes('hours') || normalized.includes('open') || normalized.includes('close') || normalized.includes('time')) {
+  if (normalized.match(/hours|open|close|time.*open/) && !matchedService) {
+    chatContext.lastTopic = 'hours';
+    chatContext.expectingFollowUp = true;
     let hoursText = `Here are our opening hours:\n\n`;
     Object.entries(CHATBOT_CONFIG.openingHours).forEach(([day, hours]) => {
       hoursText += `${day}: ${hours}\n`;
     });
-    hoursText += `\nWe're here to make you look fabulous! 💅`;
     return hoursText;
   }
   
-  // Location/Address
-  if (normalized.includes('location') || normalized.includes('address') || normalized.includes('where')) {
-    return `You can find us at:\n📍 ${CHATBOT_CONFIG.location}\n\nClick the location pin 📍 at the top right of the page for directions!`;
-  }
-  
-  // Services and prices
-if (normalized.includes('service') || normalized.includes('price') || normalized.includes('cost') || normalized.includes('nail') || normalized.includes('manicure') || normalized.includes('pedicure') || normalized.includes('acrylic')) {
-  // Check if asking about a specific service price
-  const serviceMatches = [];
-  Object.values(CHATBOT_CONFIG.services).flat().forEach(service => {
-    const serviceName = service.name.toLowerCase().replace(/[^a-z\s]/g, '');
-    if (normalized.includes(serviceName) || 
-        serviceName.split(' ').some(word => normalized.includes(word) && word.length > 3)) {
-      serviceMatches.push(service);
+  // Specific service responses with reasoning
+  if (matchedService) {
+    chatContext.lastService = matchedService;
+    
+    if (analysis.questionType === 'how' && normalized.match(/long|duration|time.*take/)) {
+      chatContext.lastTopic = 'duration';
+      chatContext.expectingFollowUp = true;
+      return `${matchedService.name} takes approximately ${matchedService.duration}.`;
     }
-  });
-  
-  if (serviceMatches.length > 0 && (normalized.includes('price') || normalized.includes('cost'))) {
-    const service = serviceMatches[0];
-    return `${service.name} starts at ${service.price}. *Prices may vary based on complexity and are subject to change.`;
+    
+    if (analysis.primary === 'pricing' || normalized.match(/price|cost|much/)) {
+      chatContext.lastTopic = 'pricing';
+      chatContext.expectingFollowUp = true;
+      return `${matchedService.name} starts at ${matchedService.price}. Prices may vary based on complexity and are subject to change.`;
+    }
+    
+    // General service info if no specific intent
+    chatContext.lastTopic = 'services';
+    chatContext.expectingFollowUp = true;
+    return `${matchedService.name} - ${matchedService.price} (takes ${matchedService.duration}). Would you like to know more about booking this service?`;
   }
-  
-  // If asking about specific service duration
-  if (serviceMatches.length > 0 && (normalized.includes('how long') || normalized.includes('duration'))) {
-    const service = serviceMatches[0];
-    return `${service.name} takes approximately ${service.duration}.`;
-  }
-  
-  // General services list if no specific service found
-  let serviceText = `Here are our main services:\n\n`;
-  
-  Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
-    serviceText += `**${category}:**\n`;
-    services.slice(0, 3).forEach(service => {
-      serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
-    });
-    serviceText += `\n`;
-  });
-  
-  serviceText += `*Prices may vary based on complexity and are subject to change. Contact us for exact quotes! 💎`;
-  return serviceText;
-}
   
   // Social media
-  if (normalized.includes('instagram') || normalized.includes('insta') || normalized.includes('tiktok') || normalized.includes('social')) {
-    return `Follow us on social media! 📱\n\n📸 Instagram: ${CHATBOT_CONFIG.socialMedia.instagram}\n🎵 TikTok: ${CHATBOT_CONFIG.socialMedia.tiktok}\n\nSee our latest nail art and get inspired! ✨`;
+  if (normalized.match(/instagram|insta|tiktok|social/)) {
+    chatContext.lastTopic = 'social';
+    return `Follow us on social media!\n\nInstagram: ${CHATBOT_CONFIG.socialMedia.instagram}\nTikTok: ${CHATBOT_CONFIG.socialMedia.tiktok}\n\nSee our latest nail art and get inspired!`;
   }
   
-  // Website guidance
-  if (normalized.includes('booking') || normalized.includes('appointment') || normalized.includes('book')) {
-    return `To book an appointment:\n\n1. Click the menu button (☰) at top left\n2. Select "📅 BOOKING"\n3. Fill in your details and pick your services\n4. Choose your preferred date and time\n\nIt's that easy! 🎉`;
+  // General services (when no specific service matched)
+  if (normalized.match(/service|nail|manicure|pedicure|acrylic|gel/) && !matchedService) {
+    chatContext.lastTopic = 'services';
+    chatContext.expectingFollowUp = true;
+    
+    let serviceText = `Here are our main services:\n\n`;
+    
+    Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
+      serviceText += `**${category}:**\n`;
+      services.slice(0, 3).forEach(service => {
+        serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
+      });
+      serviceText += `\n`;
+    });
+    
+    serviceText += `Prices may vary based on complexity and are subject to change.`;
+    return serviceText;
   }
   
-  if (normalized.includes('past booking') || normalized.includes('my booking') || normalized.includes('check booking')) {
-    return `To check your past bookings:\n\n1. Click the menu button (☰) at top left\n2. Select "MY BOOKINGS"\n3. You'll see your last 5 appointments and payment status\n\nYou need to be logged in to view your bookings! 🔐`;
+  // Website guidance with reasoning
+  if (analysis.primary === 'booking' || normalized.match(/book|appointment/)) {
+    chatContext.lastTopic = 'booking';
+    chatContext.expectingFollowUp = true;
+    return `To book an appointment:\n\n1. Click the menu button (☰) at top left\n2. Select "📅 BOOKING"\n3. Fill in your details and pick your services\n4. Choose your preferred date and time\n\nYou'll need to create an account or log in to complete your booking.`;
   }
   
-  if (normalized.includes('payment') || normalized.includes('bank') || normalized.includes('transfer') || normalized.includes('pay')) {
-    return `For payment information:\n\n1. Click the menu button (☰) at top left\n2. Select "PAYMENT INFO"\n3. You'll see our bank transfer details\n\n💡 Always use your Booking # as the payment reference!`;
+  if (normalized.match(/past booking|my booking|check booking/)) {
+    chatContext.lastTopic = 'mybookings';
+    return `To check your past bookings:\n\n1. Click the menu button (☰) at top left\n2. Select "MY BOOKINGS"\n3. You'll see your last 5 appointments and payment status\n\nYou need to be logged in to view your bookings.`;
   }
   
-  if (normalized.includes('login') || normalized.includes('account') || normalized.includes('sign in')) {
-    return `To login or create an account, you'll be prompted when you try to book an appointment or submit a review. This helps us keep track of your bookings and preferences! 👤`;
+  if (normalized.match(/payment|bank|transfer|pay/)) {
+    chatContext.lastTopic = 'payment';
+    return `For payment information:\n\n1. Click the menu button (☰) at top left\n2. Select "PAYMENT INFO"\n3. You'll see our bank transfer details\n\nAlways use your Booking # as the payment reference.`;
   }
   
-// General questions
-if (normalized.includes('how long') || normalized.includes('duration')) {
-  // Check if asking about a specific service
-  const serviceMatches = [];
-  Object.values(CHATBOT_CONFIG.services).flat().forEach(service => {
-    if (normalized.includes(service.name.toLowerCase()) || 
-        normalized.includes(service.name.toLowerCase().replace(/[^a-z]/g, ''))) {
-      serviceMatches.push(service);
-    }
-  });
-  
-  if (serviceMatches.length > 0) {
-    const service = serviceMatches[0];
-    return `${service.name} takes approximately ${service.duration}.`;
-  }
-  
-  return `Service durations vary:\n• Quick services (gel polish): 30 minutes\n• Full sets: 60-90 minutes\n• Detailed nail art: 15+ minutes per design\n\nWe'll give you an estimated time when you book! ⏰`;
-}
-  
-  if (normalized.includes('deposit') || normalized.includes('down payment')) {
-    return `Deposits are handled on a case-by-case basis. You can pay via bank transfer using the payment info in our menu. Use your booking number as reference! 💳`;
+  if (normalized.match(/login|account|sign in/)) {
+    chatContext.lastTopic = 'login';
+    return `You'll be prompted to login or create an account when you try to book an appointment or submit a review. This helps us keep track of your bookings and preferences.`;
   }
   
   // Thank you/goodbye
   if (normalized.match(/(thank|thanks|bye|goodbye)/)) {
-    return `You're welcome! Thanks for choosing ${CHATBOT_CONFIG.businessName}! Have a beautiful day! 💕✨`;
+    chatContext = { lastTopic: null, lastService: null, expectingFollowUp: false };
+    return `You're welcome! Thanks for choosing ${CHATBOT_CONFIG.businessName}! Have a beautiful day!`;
   }
   
-  // Default response
-  const defaultResponses = [
-    `I'd love to help! Could you be more specific? You can ask me about our services, prices, opening hours, location, or how to use the website! 😊`,
-    `I'm here to assist! Try asking about our nail services, booking process, opening hours, or location. What would you like to know? 💅`,
-    `Sorry, I didn't quite understand that. Feel free to ask about our services, prices, hours, location, or website features! How can I help? ✨`
+  // Contextually intelligent default responses
+  if (chatContext.lastTopic) {
+    const contextualResponse = ReasoningEngine.generateClarification(null, chatContext);
+    chatContext.expectingFollowUp = false;
+    return `I didn't quite understand that. ${contextualResponse}`;
+  }
+  
+  // Final fallback with reasoning
+  chatContext.expectingFollowUp = true;
+  const reasonedDefaults = [
+    `I'd be happy to help! You can ask me about our services, prices, opening hours, location, booking process, or contact information.`,
+    `I'm here to assist! Try asking about our nail services, how to book, our hours, location, or any policies you'd like to know about.`,
+    `I didn't quite catch that. Feel free to ask about services, prices, hours, location, booking, or how to use our website features.`
   ];
   
-  return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+  return reasonedDefaults[Math.floor(Math.random() * reasonedDefaults.length)];
 }
-
     
   </script>
 </body>
