@@ -2963,8 +2963,8 @@ ${orderSummary}
 }
 
 
-// 🚀 ENHANCED AI CHATBOT WITH FIREBASE BOOKING AVAILABILITY CHECK
 
+// 🚀 VERSATILE AI CHATBOT - Copy & Paste for Any Business
 // ================================================================
 // CONFIGURATION - CUSTOMIZE FOR EACH BUSINESS
 // ================================================================
@@ -2973,190 +2973,31 @@ const CHATBOT_CONFIG = {
   // 🔹 REQUIRED: Replace with your Google Docs public URL
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk",
   
-  // 🔹 Firebase Configuration
-  firebase: {
-  apiKey: "AIzaSyA-qvC7FrUt1yrjEqhN7Paw648j4ISWVgM",
-  authDomain: "resturantsite-a2d56.firebaseapp.com",
-  databaseURL: "https://resturantsite-a2d56-default-rtdb.firebaseio.com",
-  projectId: "resturantsite-a2d56",
-  storageBucket: "resturantsite-a2d56.firebasestorage.app",
-  messagingSenderId: "492861664245",
-  appId: "1:492861664245:web:825a8474f14647e1a8cebc"
-  },
-  
   // 🔹 Business Details (Customize per niche)
   businessName: "Nails by Rissa Spa", 
-  businessType: "spa",
+  businessType: "spa", // spa, restaurant, gym, salon, shop, etc.
   greeting: "Hi! I'm here to help you with any questions about our spa services. What would you like to know?",
-  
-  // 🔹 Business Hours & Availability Settings
-  businessHours: {
-    monday: { open: "09:00", close: "18:00" },
-    tuesday: { open: "09:00", close: "18:00" },
-    wednesday: { open: "09:00", close: "18:00" },
-    thursday: { open: "09:00", close: "18:00" },
-    friday: { open: "09:00", close: "18:00" },
-    saturday: { open: "10:00", close: "16:00" },
-    sunday: { open: null, close: null } // Closed on Sunday
-  },
-  
-  // 🔹 Service configurations
-  services: {
-    "manicure": { duration: 60, name: "Manicure" },
-    "pedicure": { duration: 90, name: "Pedicure" },
-    "facial": { duration: 75, name: "Facial Treatment" },
-    "massage": { duration: 90, name: "Massage Therapy" },
-    "nail art": { duration: 120, name: "Nail Art Design" },
-    "eyebrow": { duration: 30, name: "Eyebrow Service" }
-  },
   
   // 🔹 Fallback responses when no exact match is found
   fallbackResponses: [
-    "I'd be happy to help! Could you ask about something specific like our services, prices, booking availability, or location?",
+    "I'd be happy to help! Could you ask about something specific like our services, prices, booking, or location?",
     "I'm here to help with questions about our {businessType} services. What would you like to know?",
-    "Feel free to ask about our treatments, pricing, location, or check available appointment times!"
+    "Feel free to ask about our treatments, pricing, location, or how to book!"
   ],
 
-  // 🔹 Smart keyword categories
+  // 🔹 Smart keyword categories (automatically adapts to business type)
   keywords: {
-    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i', 'availability', 'slots', 'times'],
+    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i'],
     pricing: ['price', 'cost', 'how much', 'fee', 'charge', 'rate', '$', 'money', 'expensive'],
     services: ['service', 'what do you', 'offer', 'available', 'menu', 'treatment', 'do you have'],
     location: ['location', 'where', 'address', 'find you', 'directions', 'how to get'],
     hours: ['hours', 'open', 'closed', 'time', 'when', 'operating'],
-    contact: ['contact', 'phone', 'call', 'reach', 'number', 'email'],
-    availability: ['free', 'available', 'open slots', 'check availability', 'when available']
+    contact: ['contact', 'phone', 'call', 'reach', 'number', 'email']
   }
 };
 
 // ================================================================
-// FIREBASE INTEGRATION CLASS
-// ================================================================
-
-class FirebaseBookingManager {
-  constructor(config) {
-    this.config = config;
-    this.db = null;
-    this.initFirebase();
-  }
-
-  async initFirebase() {
-    try {
-      // Initialize Firebase (make sure to include Firebase SDK in your HTML)
-      if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(this.config.firebase);
-        this.db = firebase.firestore();
-        console.log("✅ Firebase initialized successfully");
-      } else {
-        console.error("❌ Firebase SDK not loaded");
-      }
-    } catch (error) {
-      console.error("❌ Firebase initialization failed:", error);
-    }
-  }
-
-  async checkAvailability(date, serviceType, duration = 60) {
-    if (!this.db) {
-      console.error("Firebase not initialized");
-      return null;
-    }
-
-    try {
-      const dateString = date.toISOString().split('T')[0];
-      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'lowercase' });
-      
-      // Check if business is open on this day
-      const businessHours = this.config.businessHours[dayOfWeek];
-      if (!businessHours.open) {
-        return { available: false, reason: "We're closed on this day" };
-      }
-
-      // Get existing bookings for this date
-      const bookingsSnapshot = await this.db
-        .collection('bookings')
-        .where('date', '==', dateString)
-        .where('status', '==', 'confirmed')
-        .get();
-
-      const existingBookings = [];
-      bookingsSnapshot.forEach(doc => {
-        const booking = doc.data();
-        existingBookings.push({
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          service: booking.service
-        });
-      });
-
-      // Generate available time slots
-      const availableSlots = this.generateTimeSlots(businessHours, existingBookings, duration);
-      
-      return {
-        available: availableSlots.length > 0,
-        slots: availableSlots,
-        date: dateString,
-        service: serviceType
-      };
-    } catch (error) {
-      console.error("Error checking availability:", error);
-      return null;
-    }
-  }
-
-  generateTimeSlots(businessHours, existingBookings, serviceDuration) {
-    const slots = [];
-    const startTime = this.timeToMinutes(businessHours.open);
-    const endTime = this.timeToMinutes(businessHours.close);
-    
-    // Generate 30-minute intervals
-    for (let time = startTime; time <= endTime - serviceDuration; time += 30) {
-      const slotStart = this.minutesToTime(time);
-      const slotEnd = this.minutesToTime(time + serviceDuration);
-      
-      // Check if this slot conflicts with existing bookings
-      const hasConflict = existingBookings.some(booking => {
-        const bookingStart = this.timeToMinutes(booking.startTime);
-        const bookingEnd = this.timeToMinutes(booking.endTime);
-        
-        return (time < bookingEnd && time + serviceDuration > bookingStart);
-      });
-      
-      if (!hasConflict) {
-        slots.push({
-          startTime: slotStart,
-          endTime: slotEnd,
-          formatted: `${slotStart} - ${slotEnd}`
-        });
-      }
-    }
-    
-    return slots;
-  }
-
-  timeToMinutes(timeString) {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return hours * 60 + minutes;
-  }
-
-  minutesToTime(minutes) {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  }
-
-  async getServiceDuration(serviceName) {
-    const serviceKey = serviceName.toLowerCase();
-    for (const [key, service] of Object.entries(this.config.services)) {
-      if (serviceKey.includes(key)) {
-        return service.duration;
-      }
-    }
-    return 60; // Default duration
-  }
-}
-
-// ================================================================
-// ENHANCED CHATBOT CLASS
+// CORE CHATBOT ENGINE - NO NEED TO MODIFY
 // ================================================================
 
 class SmartChatbot {
@@ -3165,10 +3006,6 @@ class SmartChatbot {
     this.businessInfo = "";
     this.conversationStarted = false;
     this.context = [];
-    this.bookingManager = new FirebaseBookingManager(config);
-    this.waitingForDate = false;
-    this.waitingForService = false;
-    this.currentBookingQuery = {};
     this.initializeElements();
     this.loadBusinessData();
   }
@@ -3185,7 +3022,7 @@ class SmartChatbot {
 
   bindEvents() {
     this.chatBtn.onclick = () => this.openChat();
-    this.closeChat.onclick = () => this.closeChatWindow();
+    this.closeChat.onclick = () => this.closeChat();
     this.sendBtn.onclick = () => this.sendMessage();
     this.chatInput.addEventListener("keypress", e => {
       if (e.key === "Enter") this.sendMessage();
@@ -3194,6 +3031,7 @@ class SmartChatbot {
 
   async loadBusinessData() {
     try {
+      // Convert Google Docs edit URL to export URL
       const exportUrl = this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt');
       const response = await fetch(exportUrl);
       const text = await response.text();
@@ -3232,6 +3070,7 @@ class SmartChatbot {
     this.chatInput.value = "";
     this.context.push(msg);
     
+    // Keep context manageable (last 5 messages)
     if (this.context.length > 5) {
       this.context.shift();
     }
@@ -3270,39 +3109,28 @@ class SmartChatbot {
   }
 
   formatMessage(text) {
+    // Add line breaks and format currency
     return text
       .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$$1</strong>')
       .replace(/\n/g, '<br>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   }
 
-  async generateResponse(userMessage) {
+  generateResponse(userMessage) {
     if (!this.businessInfo) {
       this.addMessage("Bot", "I'm still loading our information. Please give me a moment!");
       return;
     }
 
     const msg = userMessage.toLowerCase().trim();
-    
-    // Handle booking flow states
-    if (this.waitingForDate) {
-      await this.handleDateInput(userMessage);
-      return;
-    }
-    
-    if (this.waitingForService) {
-      await this.handleServiceInput(userMessage);
-      return;
-    }
-    
-    const response = await this.processQuery(msg, userMessage);
+    const response = this.processQuery(msg, userMessage);
     this.addMessage("Bot", response);
   }
 
-  async processQuery(normalizedMsg, originalMsg) {
+  processQuery(normalizedMsg, originalMsg) {
     // Handle conversational elements first
     if (this.isGreeting(normalizedMsg)) {
-      return `Hello! Welcome to ${this.config.businessName}. I'm here to help you with information about our services, prices, booking availability, and more. What can I help you with?`;
+      return `Hello! Welcome to ${this.config.businessName}. I'm here to help you with information about our services, prices, booking, and more. What can I help you with?`;
     }
 
     if (this.isThanking(normalizedMsg)) {
@@ -3313,186 +3141,16 @@ class SmartChatbot {
       return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you!`;
     }
 
-    // Check for availability queries
-    if (this.isAvailabilityQuery(normalizedMsg)) {
-      return await this.handleAvailabilityQuery(originalMsg);
-    }
-
-    // Process other specific queries
+    // Process specific queries
     const queryType = this.identifyQueryType(normalizedMsg);
     const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
-    
+
     if (relevantInfo && relevantInfo.length > 10) {
       return this.formatResponse(relevantInfo, queryType);
     }
 
+    // Intelligent fallback with context awareness
     return this.generateSmartFallback(originalMsg, queryType);
-  }
-
-  isAvailabilityQuery(msg) {
-    const availabilityKeywords = ['available', 'availability', 'book', 'appointment', 'schedule', 'free', 'open slots', 'when can', 'check availability'];
-    return availabilityKeywords.some(keyword => msg.includes(keyword));
-  }
-
-  async handleAvailabilityQuery(originalMsg) {
-    // Extract date and service from message
-    const dateMatch = this.extractDate(originalMsg);
-    const serviceMatch = this.extractService(originalMsg);
-
-    if (!dateMatch && !serviceMatch) {
-      this.waitingForService = true;
-      this.currentBookingQuery = {};
-      return "I'd be happy to check availability for you! What service are you interested in? We offer:\n\n" + 
-             Object.values(this.config.services).map(s => `• ${s.name}`).join('\n');
-    }
-
-    if (serviceMatch && !dateMatch) {
-      this.currentBookingQuery.service = serviceMatch;
-      this.waitingForDate = true;
-      return `Great choice! When would you like to book your ${serviceMatch}? Please provide a date (e.g., "tomorrow", "next Monday", "December 15th").`;
-    }
-
-    if (dateMatch && serviceMatch) {
-      return await this.checkAndDisplayAvailability(dateMatch, serviceMatch);
-    }
-
-    return "I can help you check availability! Please tell me what service you're interested in and your preferred date.";
-  }
-
-  async handleServiceInput(userMessage) {
-    const service = this.extractService(userMessage);
-    if (service) {
-      this.currentBookingQuery.service = service;
-      this.waitingForService = false;
-      this.waitingForDate = true;
-      this.addMessage("Bot", `Perfect! When would you like to book your ${service}? Please provide a date (e.g., "tomorrow", "next Monday", "December 15th").`);
-    } else {
-      this.addMessage("Bot", "I didn't recognize that service. Please choose from:\n\n" + 
-                      Object.values(this.config.services).map(s => `• ${s.name}`).join('\n'));
-    }
-  }
-
-  async handleDateInput(userMessage) {
-    const date = this.parseDate(userMessage);
-    if (date) {
-      this.currentBookingQuery.date = date;
-      this.waitingForDate = false;
-      const result = await this.checkAndDisplayAvailability(date, this.currentBookingQuery.service);
-      this.addMessage("Bot", result);
-      this.currentBookingQuery = {}; // Reset
-    } else {
-      this.addMessage("Bot", "I couldn't understand that date. Please try formats like 'tomorrow', 'next Monday', 'December 15th', or 'MM/DD/YYYY'.");
-    }
-  }
-
-  extractService(message) {
-    const msg = message.toLowerCase();
-    for (const [key, service] of Object.entries(this.config.services)) {
-      if (msg.includes(key) || msg.includes(service.name.toLowerCase())) {
-        return service.name;
-      }
-    }
-    return null;
-  }
-
-  extractDate(message) {
-    // Simple date extraction - you might want to use a more sophisticated library
-    const datePatterns = [
-      /(\d{1,2}\/\d{1,2}\/\d{4})/,
-      /(\d{4}-\d{1,2}-\d{1,2})/,
-      /(tomorrow|today)/i,
-      /(next\s+\w+)/i,
-      /(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i
-    ];
-    
-    for (const pattern of datePatterns) {
-      const match = message.match(pattern);
-      if (match) {
-        return this.parseDate(match[0]);
-      }
-    }
-    return null;
-  }
-
-  parseDate(dateString) {
-    const today = new Date();
-    const str = dateString.toLowerCase().trim();
-    
-    if (str === 'today') {
-      return today;
-    }
-    
-    if (str === 'tomorrow') {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow;
-    }
-    
-    if (str.startsWith('next ')) {
-      const dayName = str.substring(5);
-      return this.getNextWeekday(dayName);
-    }
-    
-    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    if (weekdays.includes(str)) {
-      return this.getNextWeekday(str);
-    }
-    
-    // Try to parse standard date formats
-    const parsed = new Date(dateString);
-    if (!isNaN(parsed.getTime()) && parsed > today) {
-      return parsed;
-    }
-    
-    return null;
-  }
-
-  getNextWeekday(dayName) {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const today = new Date();
-    const todayIndex = today.getDay();
-    const targetIndex = days.indexOf(dayName.toLowerCase());
-    
-    if (targetIndex === -1) return null;
-    
-    let daysAhead = targetIndex - todayIndex;
-    if (daysAhead <= 0) daysAhead += 7;
-    
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysAhead);
-    return targetDate;
-  }
-
-  async checkAndDisplayAvailability(date, serviceName) {
-    try {
-      const serviceDuration = await this.bookingManager.getServiceDuration(serviceName);
-      const availability = await this.bookingManager.checkAvailability(date, serviceName, serviceDuration);
-      
-      if (!availability) {
-        return "I'm having trouble checking availability right now. Please try again later or call us directly.";
-      }
-      
-      if (!availability.available) {
-        return `Sorry, we're ${availability.reason || 'not available'} on ${date.toDateString()}. Would you like to try a different date?`;
-      }
-      
-      if (availability.slots.length === 0) {
-        return `Unfortunately, we're fully booked for ${serviceName} on ${date.toDateString()}. Would you like to check another date?`;
-      }
-      
-      const slotsText = availability.slots
-        .slice(0, 6) // Show max 6 slots
-        .map(slot => `• ${slot.formatted}`)
-        .join('\n');
-      
-      const moreSlots = availability.slots.length > 6 ? `\n\n...and ${availability.slots.length - 6} more slots available!` : '';
-      
-      return `Great news! We have availability for ${serviceName} on ${date.toDateString()}:\n\n${slotsText}${moreSlots}\n\nTo book your appointment, please call us or visit our website. Would you like to check availability for another date or service?`;
-      
-    } catch (error) {
-      console.error("Error checking availability:", error);
-      return "I'm having trouble checking availability right now. Please call us directly for the most up-to-date schedule.";
-    }
   }
 
   isGreeting(msg) {
@@ -3516,6 +3174,7 @@ class SmartChatbot {
       }
     }
     
+    // Advanced pattern recognition
     if (/what.*do.*you.*(?:have|offer|provide)/.test(msg)) return 'services';
     if (/how.*(?:much|expensive|cost)/.test(msg)) return 'pricing';
     if (/(?:when|what time).*open/.test(msg)) return 'hours';
@@ -3534,11 +3193,13 @@ class SmartChatbot {
       const lineLower = line.toLowerCase();
       let score = 0;
       
+      // Score based on query words
       queryWords.forEach(word => {
         if (lineLower.includes(word)) score += 2;
         if (lineLower.includes(word.substring(0, Math.max(4, word.length - 2)))) score += 1;
       });
       
+      // Bonus for query type keywords
       if (queryType && this.config.keywords[queryType]) {
         this.config.keywords[queryType].forEach(keyword => {
           if (lineLower.includes(keyword)) score += 3;
@@ -3552,6 +3213,7 @@ class SmartChatbot {
     
     bestMatches.sort((a, b) => b.score - a.score);
     
+    // Return top matches, combined intelligently
     const topMatches = bestMatches.slice(0, 3);
     if (topMatches.length === 0) return null;
     
@@ -3559,22 +3221,23 @@ class SmartChatbot {
       return topMatches[0].text;
     }
     
+    // Combine related information
     return topMatches
       .map(match => match.text)
       .join(' ')
-      .substring(0, 300);
+      .substring(0, 300); // Limit response length
   }
 
   formatResponse(info, queryType) {
     let response = info;
     
+    // Add contextual closing based on query type
     const contextualEndings = {
-      booking: " You can also ask me to check availability for specific dates and services!",
+      booking: " You can also use our online booking system for instant confirmation!",
       pricing: " Contact us for any package deals or special offers!",
-      services: " Would you like to check availability for any of these services?",
+      services: " Would you like to know more about any specific service?",
       location: " Feel free to reach out if you need detailed directions!",
-      hours: " We look forward to welcoming you during our operating hours!",
-      availability: " I can help you find the perfect appointment time!"
+      hours: " We look forward to welcoming you during our operating hours!"
     };
     
     if (contextualEndings[queryType] && response.length < 200) {
@@ -3588,20 +3251,21 @@ class SmartChatbot {
     const fallbacks = this.config.fallbackResponses;
     let response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
     
+    // Customize fallback based on query type
     const suggestions = {
-      general: "Try asking about our services, pricing, location, or checking availability for appointments!",
+      general: "Try asking about our services, pricing, location, or booking information!",
       services: "Ask me about specific treatments or services you're interested in!",
       pricing: "Feel free to ask about costs for specific services!",
-      booking: "I can help you check availability for appointments on specific dates!",
+      booking: "I can help you with appointment and scheduling information!",
       location: "Need directions or information about our location?",
-      hours: "Want to know when we're open? Just ask!",
-      availability: "I can check available appointment slots for you!"
+      hours: "Want to know when we're open? Just ask!"
     };
     
     if (suggestions[queryType]) {
       response += " " + suggestions[queryType];
     }
     
+    // Replace placeholders
     response = response.replace('{businessType}', this.config.businessType);
     response = response.replace('{businessName}', this.config.businessName);
     
@@ -3613,6 +3277,7 @@ class SmartChatbot {
 // INITIALIZE CHATBOT
 // ================================================================
 
+// Initialize the chatbot when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.smartChatbot = new SmartChatbot(CHATBOT_CONFIG);
 });
