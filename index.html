@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     // <script type="module" src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@xenova/transformers"></script>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
     body {
@@ -2965,458 +2966,130 @@ ${orderSummary}
 
 
 
+
 const CHATBOT_CONFIG = {
   // 🔹 REQUIRED: Replace with your Google Docs public URL
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk",
-  
-  // 🔹 Business Details (Customize per niche - ONLY CHANGE THESE)
-  businessName: "Nails by Rissa Spa", 
+
+  // 🔹 Business Details (just update these per client/niche)
+  businessName: "Nails by Rissa Spa",
   businessType: "spa",
-  greeting: "Hi! I'm your AI assistant for Nails by Rissa Spa. How can I help you today?",
-  
-  // 🔹 AI Model Configuration
-  aiModel: {
-    enabled: true,
-    modelName: "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
-    fallbackToRules: true
-  },
-  
-  // 🔹 MINIMAL fallbacks (90% of info should be in Google Doc)
-  emergencyFallbacks: {
-    general: "I can help you with our services, pricing, booking, location, and hours. What would you like to know?",
-    error: "I'm having trouble accessing our information right now. Please try asking about our services!"
-  }
+  greeting: "Hi! I’m your AI assistant for Nails by Rissa Spa. Ask me anything — services, prices, booking, location, hours, and more!"
 };
 
-class SmartChatbotWithAI {
+class SmartChatbot {
   constructor(config) {
     this.config = config;
     this.businessInfo = "";
-    this.conversationStarted = false;
-    this.context = [];
-    this.isLoading = true;
-    this.aiModel = null;
     this.aiReady = false;
-    
-    this.initializeElements();
-    this.loadBusinessData();
-    this.initializeAI();
+    this.generator = null;
+    this.init();
   }
 
-  initializeElements() {
-    this.chatBtn = document.getElementById("chatbotBtn");
-    this.chatWin = document.getElementById("chatWindow");
-    this.closeChat = document.getElementById("closeChat");
-    this.chatMsgs = document.getElementById("chatMessages");
-    this.chatInput = document.getElementById("chatInput");
-    this.sendBtn = document.getElementById("sendBtn");
-    
-    if (!this.chatBtn || !this.chatWin || !this.chatInput || !this.sendBtn) {
-      console.error("❌ Chatbot HTML elements not found! Check your HTML structure.");
-      return;
-    }
-    
-    this.bindEvents();
-  }
-
-  bindEvents() {
-    // Fixed event binding with null checks
-    if (this.chatBtn) {
-      this.chatBtn.addEventListener('click', () => this.openChat());
-    }
-    
-    if (this.closeChat) {
-      this.closeChat.addEventListener('click', () => this.closeChatWindow());
-    }
-    
-    if (this.sendBtn) {
-      this.sendBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.sendMessage();
-      });
-    }
-    
-    if (this.chatInput) {
-      this.chatInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          this.sendMessage();
-        }
-      });
-    }
+  async init() {
+    await this.loadBusinessData();
+    await this.initAI();
   }
 
   async loadBusinessData() {
     try {
-      console.log("📄 Loading business data from Google Docs...");
-      
-      // Multiple URL formats to try
-      const docId = this.extractDocId(this.config.docUrl);
-      const urls = [
-        `https://docs.google.com/document/d/${docId}/export?format=txt`,
-        `https://docs.google.com/document/d/${docId}/export?format=plain`,
-        this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt')
-      ];
-
-      let success = false;
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) {
-            const text = await response.text();
-            if (text && text.length > 100) {
-              this.businessInfo = this.cleanDocumentText(text);
-              success = true;
-              console.log("✅ Business data loaded from Google Docs!");
-              break;
-            }
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (!success) {
-        console.log("⚠️ Could not load Google Doc. Using emergency fallbacks.");
-        this.businessInfo = "Google Doc information temporarily unavailable.";
-      }
-    } catch (error) {
-      console.error("❌ Failed to load business data:", error);
-      this.businessInfo = "Information temporarily unavailable.";
-    } finally {
-      this.isLoading = false;
+      const res = await fetch(this.config.docUrl);
+      if (!res.ok) throw new Error("Doc fetch failed");
+      const text = await res.text();
+      this.businessInfo = text.replace(/\s+/g, " ").trim();
+      console.log("✅ Business info loaded");
+    } catch (err) {
+      console.error("❌ Couldn’t load Google Doc", err);
+      this.businessInfo = "";
     }
   }
 
-  extractDocId(url) {
-    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    return match ? match[1] : '';
-  }
-
-  cleanDocumentText(text) {
-    return text
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  async initializeAI() {
-    if (!this.config.aiModel.enabled) {
-      console.log("🔧 AI model disabled");
-      return;
-    }
-
+  async initAI() {
     try {
-      console.log("🤖 Loading AI model...");
-      const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
-      this.aiModel = await pipeline('text-classification', this.config.aiModel.modelName);
+      const { pipeline } = window.transformers;
+      this.generator = await pipeline("text-generation", "Xenova/distilgpt2");
       this.aiReady = true;
-      console.log("✅ AI model ready!");
-    } catch (error) {
-      console.error("❌ AI model failed to load:", error);
-      this.aiReady = false;
+      console.log("✅ AI model ready");
+    } catch (err) {
+      console.error("❌ AI init failed", err);
     }
   }
 
-  openChat() {
-    if (this.chatWin) {
-      this.chatWin.style.display = "flex";
-      if (!this.conversationStarted) {
-        const statusMessage = this.aiReady ? 
-          `${this.config.greeting} I'm powered by AI to better understand your needs!` : 
-          this.config.greeting;
-        this.addMessage("Bot", statusMessage);
-        this.conversationStarted = true;
-      }
-    }
-  }
-
-  closeChatWindow() {
-    if (this.chatWin) {
-      this.chatWin.style.display = "none";
-    }
-  }
-
-  sendMessage() {
-    if (!this.chatInput) return;
-    
-    const msg = this.chatInput.value.trim();
-    if (!msg) return;
-    
-    this.addMessage("You", msg);
-    this.chatInput.value = "";
-    this.context.push(msg);
-    
-    if (this.context.length > 5) {
-      this.context.shift();
-    }
-    
-    // Add typing indicator
-    this.addTypingIndicator();
-    
-    setTimeout(async () => {
-      this.removeTypingIndicator();
-      await this.generateResponse(msg);
-    }, 500);
-  }
-
-  addMessage(sender, text) {
-    if (!this.chatMsgs) return;
-    
-    const bubble = document.createElement("div");
-    const isBot = sender === "Bot";
-    
-    bubble.style.cssText = `
-      margin: 10px 0;
-      padding: 12px 15px;
-      border-radius: 18px;
-      max-width: 85%;
-      word-wrap: break-word;
-      line-height: 1.4;
-      font-size: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      ${isBot ? 
-        'background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); color: #333; margin-right: auto; border: 1px solid #dee2e6;' : 
-        'background: linear-gradient(135deg, #E58BBE 0%, #d63384 100%); color: white; margin-left: auto; text-align: right;'
-      }
-    `;
-    
-    bubble.innerHTML = `
-      <div style="font-weight: 500; font-size: 12px; margin-bottom: 4px; opacity: 0.8;">
-        ${isBot ? '🤖 Assistant' : '👤 You'}
-      </div>
-      <div>${this.formatMessage(text)}</div>
-    `;
-    
-    this.chatMsgs.appendChild(bubble);
-    this.chatMsgs.scrollTop = this.chatMsgs.scrollHeight;
-  }
-
-  addTypingIndicator() {
-    if (!this.chatMsgs) return;
-    
-    const typing = document.createElement("div");
-    typing.id = "typingIndicator";
-    typing.style.cssText = `
-      margin: 10px 0;
-      padding: 12px 15px;
-      border-radius: 18px;
-      max-width: 85%;
-      background: #f8f9fa;
-      color: #666;
-      margin-right: auto;
-      font-style: italic;
-      animation: pulse 1.5s infinite;
-    `;
-    typing.innerHTML = "🤖 AI is thinking...";
-    this.chatMsgs.appendChild(typing);
-    this.chatMsgs.scrollTop = this.chatMsgs.scrollHeight;
-  }
-
-  removeTypingIndicator() {
-    const typing = document.getElementById("typingIndicator");
-    if (typing) typing.remove();
-  }
-
-  formatMessage(text) {
-    return text
-      .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$$1</strong>')
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  }
-
-  async generateResponse(userMessage) {
-    if (this.isLoading) {
-      this.addMessage("Bot", "I'm still loading our information. Please give me a moment!");
-      return;
+  async getAnswer(userMessage) {
+    if (!this.businessInfo) {
+      return "Sorry, I don’t have business info right now.";
     }
 
-    const msg = userMessage.toLowerCase().trim();
-    
-    // Handle basic conversation
-    if (this.isGreeting(msg)) {
-      this.addMessage("Bot", `Hello! Welcome to ${this.config.businessName}. How can I help you today?`);
-      return;
-    }
+    // Step 1: Find relevant part of doc
+    const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 20);
+    let bestLine = lines[0], bestScore = 0;
+    const words = userMessage.toLowerCase().split(/\s+/);
 
-    if (this.isThanking(msg)) {
-      this.addMessage("Bot", "You're very welcome! Is there anything else I can help you with?");
-      return;
-    }
-
-    if (this.isGoodbye(msg)) {
-      this.addMessage("Bot", `Thank you for visiting! We look forward to serving you at ${this.config.businessName}!`);
-      return;
-    }
-
-    try {
-      const response = await this.generateAIResponse(userMessage);
-      this.addMessage("Bot", response);
-    } catch (error) {
-      console.error("Response error:", error);
-      this.addMessage("Bot", this.config.emergencyFallbacks.error);
-    }
-  }
-
-  async generateAIResponse(userMessage) {
-    // First, try to find relevant info from Google Doc
-    const relevantInfo = this.extractRelevantInfo(userMessage);
-    
-    if (relevantInfo && relevantInfo.length > 50) {
-      // If we have good info from Google Doc, use AI to enhance it
-      if (this.aiReady) {
-        return await this.enhanceWithAI(relevantInfo, userMessage);
-      } else {
-        return this.formatDocResponse(relevantInfo, userMessage);
-      }
-    } else {
-      // No relevant info found, use AI for general response
-      if (this.aiReady) {
-        return await this.generateContextualResponse(userMessage);
-      } else {
-        return this.config.emergencyFallbacks.general;
-      }
-    }
-  }
-
-  extractRelevantInfo(query) {
-    if (!this.businessInfo || this.businessInfo.length < 50) return null;
-
-    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    const sections = this.businessInfo.split(/(?:\n\s*\n|\.\s+)/).filter(section => section.trim().length > 30);
-    
-    let bestMatch = null;
-    let maxScore = 0;
-    
-    for (let section of sections) {
-      const sectionLower = section.toLowerCase();
+    for (let line of lines) {
       let score = 0;
-      
-      // Score based on query words
-      queryWords.forEach(word => {
-        if (sectionLower.includes(word)) score += 2;
-      });
-      
-      // Bonus for important keywords
-      const queryType = this.identifyQueryType(query.toLowerCase());
-      const typeBonus = this.getTypeBonus(sectionLower, queryType);
-      score += typeBonus;
-      
-      if (score > maxScore && score >= 3) {
-        maxScore = score;
-        bestMatch = section.trim();
+      for (let w of words) {
+        if (line.toLowerCase().includes(w)) score++;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestLine = line;
       }
     }
-    
-    return bestMatch;
-  }
 
-  async enhanceWithAI(info, query) {
-    try {
-      const analysis = await this.aiModel(query);
-      const sentiment = analysis[0].label.toLowerCase();
-      
-      let response = info.length > 250 ? info.substring(0, 250) + "..." : info;
-      
-      // Add AI-driven tone
-      if (sentiment === 'positive') {
-        response += " I'm excited to help you with this! 😊";
-      } else if (sentiment === 'negative') {
-        response += " I understand your concern and want to make sure I address this properly.";
-      }
-      
-      return response;
-    } catch (error) {
-      return this.formatDocResponse(info, query);
-    }
-  }
-
-  async generateContextualResponse(query) {
-    if (!this.aiReady) {
-      return this.config.emergencyFallbacks.general;
+    // Step 2: Use AI to rephrase / expand the info
+    if (this.aiReady && bestLine) {
+      const output = await this.generator(
+        `The customer asked: "${userMessage}". Based on this info: "${bestLine}", reply naturally as a helpful ${this.config.businessType} assistant.`,
+        { max_new_tokens: 60 }
+      );
+      return output[0].generated_text;
     }
 
-    try {
-      const analysis = await this.aiModel(query);
-      const sentiment = analysis[0].label.toLowerCase();
-      const queryLower = query.toLowerCase();
-      
-      if (sentiment === 'positive') {
-        if (queryLower.includes('service')) {
-          return `I'm thrilled you're interested in ${this.config.businessName} services! Let me know what specific service you'd like to learn about.`;
-        }
-        return `Great question! I'd love to help you with information about ${this.config.businessName}. What would you like to know?`;
-      }
-      
-      return `I can help you learn about ${this.config.businessName}. Try asking about our services, pricing, location, hours, or booking!`;
-    } catch (error) {
-      return this.config.emergencyFallbacks.general;
-    }
-  }
-
-  formatDocResponse(info, query) {
-    let response = info.length > 200 ? info.substring(0, 200) + "..." : info;
-    
-    const queryLower = query.toLowerCase();
-    if (queryLower.includes('price')) {
-      response += " Would you like details about any specific service?";
-    } else if (queryLower.includes('book')) {
-      response += " Ready to schedule your appointment?";
-    }
-    
-    return response;
-  }
-
-  identifyQueryType(msg) {
-    if (/(?:price|cost|how much|fee|charge|rate|\$|money)/.test(msg)) return 'pricing';
-    if (/(?:book|appointment|schedule|reserve|available)/.test(msg)) return 'booking';
-    if (/(?:service|what.*do|offer|treatment|menu)/.test(msg)) return 'services';
-    if (/(?:location|where|address|find|directions)/.test(msg)) return 'location';
-    if (/(?:hours|open|closed|time|when.*open)/.test(msg)) return 'hours';
-    if (/(?:contact|phone|call|reach|number|email)/.test(msg)) return 'contact';
-    return 'general';
-  }
-
-  getTypeBonus(text, queryType) {
-    const bonusWords = {
-      pricing: ['price', '$', 'cost', 'fee', 'charge'],
-      booking: ['book', 'appointment', 'schedule', 'reserve'],
-      services: ['service', 'treatment', 'offer', 'menu'],
-      location: ['location', 'address', 'directions'],
-      hours: ['hours', 'open', 'closed', 'time'],
-      contact: ['contact', 'phone', 'call', 'email']
-    };
-    
-    const words = bonusWords[queryType] || [];
-    return words.filter(word => text.includes(word)).length * 3;
-  }
-
-  isGreeting(msg) {
-    return /(?:^|\s)(hi|hello|hey|good morning|good afternoon|good evening)(?:\s|$)/.test(msg);
-  }
-
-  isThanking(msg) {
-    return /(?:thank|thanks|appreciate)/.test(msg);
-  }
-
-  isGoodbye(msg) {
-    return /(?:bye|goodbye|see you|talk later|have a good)/.test(msg);
+    return bestLine || "Could you rephrase your question?";
   }
 }
 
 // ================================================================
-// INITIALIZE CHATBOT
+// EXAMPLE USAGE IN CHATBOT UI
 // ================================================================
+let bot;
+document.addEventListener("DOMContentLoaded", async () => {
+  bot = new SmartChatbot(CHATBOT_CONFIG);
 
-document.addEventListener('DOMContentLoaded', () => {
-  console.log("🚀 Initializing AI Chatbot...");
-  window.smartChatbot = new SmartChatbotWithAI(CHATBOT_CONFIG);
+  const chatBtn = document.getElementById("chatbotBtn");
+  const chatWin = document.getElementById("chatWindow");
+  const chatMsgs = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  function addMessage(sender, text) {
+    const div = document.createElement("div");
+    div.innerHTML = `<b>${sender}:</b> ${text}`;
+    chatMsgs.appendChild(div);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    addMessage("You", msg);
+    chatInput.value = "";
+
+    addMessage("Bot", "⏳ Thinking...");
+    const answer = await bot.getAnswer(msg);
+    chatMsgs.lastChild.innerHTML = `<b>Bot:</b> ${answer}`;
+  }
+
+  chatBtn.onclick = () => {
+    chatWin.style.display = "flex";
+    if (chatMsgs.innerHTML === "") addMessage("Bot", CHATBOT_CONFIG.greeting);
+  };
+
+  sendBtn.onclick = sendMessage;
+  chatInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+  });
 });
-
 
         
   </script>
