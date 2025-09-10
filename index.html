@@ -2964,8 +2964,7 @@ ${orderSummary}
 
 
 
-
-// 🚀 VERSATILE AI CHATBOT - Copy & Paste for Any Business
+// 🚀 VERSATILE AI CHATBOT - FIXED VERSION
 // ================================================================
 // CONFIGURATION - CUSTOMIZE FOR EACH BUSINESS
 // ================================================================
@@ -3025,7 +3024,6 @@ class SmartChatbot {
 
   bindEvents() {
     this.chatBtn.onclick = () => this.openChat();
-    // FIXED: Corrected method name
     this.closeChat.onclick = () => this.closeChatWindow();
     this.sendBtn.onclick = () => this.sendMessage();
     this.chatInput.addEventListener("keypress", e => {
@@ -3036,14 +3034,12 @@ class SmartChatbot {
   async loadBusinessData() {
     this.docLoadAttempts++;
     try {
-      // FIXED: Enhanced Google Docs URL handling
       let exportUrl = this.config.docUrl;
       
       // Handle different Google Docs URL formats
       if (exportUrl.includes('/edit')) {
         exportUrl = exportUrl.replace(/\/edit.*$/, '/export?format=txt');
       } else if (exportUrl.includes('docs.google.com')) {
-        // Extract document ID and create proper export URL
         const docIdMatch = exportUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
         if (docIdMatch) {
           const docId = docIdMatch[1];
@@ -3067,12 +3063,10 @@ class SmartChatbot {
       
       this.businessInfo = this.cleanDocumentText(text);
       console.log("✅ Business data loaded successfully");
-      console.log("📄 Data preview:", this.businessInfo.substring(0, 200) + "...");
       
     } catch (error) {
       console.error(`❌ Failed to load business data (attempt ${this.docLoadAttempts}/${this.maxLoadAttempts}):`, error);
       
-      // FIXED: Better fallback with retry logic
       if (this.docLoadAttempts < this.maxLoadAttempts) {
         console.log("🔄 Retrying in 2 seconds...");
         setTimeout(() => this.loadBusinessData(), 2000);
@@ -3113,7 +3107,6 @@ class SmartChatbot {
       this.addMessage("Bot", this.config.greeting);
       this.conversationStarted = true;
     }
-    // Focus input for better UX
     setTimeout(() => this.chatInput.focus(), 100);
   }
 
@@ -3129,17 +3122,15 @@ class SmartChatbot {
     this.chatInput.value = "";
     this.context.push(msg);
     
-    // Keep context manageable (last 5 messages)
     if (this.context.length > 5) {
       this.context.shift();
     }
     
-    // Show typing indicator
     this.showTypingIndicator();
     setTimeout(() => {
       this.hideTypingIndicator();
       this.generateResponse(msg);
-    }, 300);
+    }, 1000);
   }
 
   showTypingIndicator() {
@@ -3201,13 +3192,12 @@ class SmartChatbot {
   }
 
   formatMessage(text) {
-    // FIXED: Enhanced formatting with better currency and text styling
     return text
       .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$1</strong>')
       .replace(/\n/g, '<br>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/•/g, '•'); // Ensure bullet points render properly
+      .replace(/•/g, '•');
   }
 
   generateResponse(userMessage) {
@@ -3235,16 +3225,187 @@ class SmartChatbot {
       return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you soon! 💅✨`;
     }
 
-    // Process specific queries
+    // FIXED: Better query type identification and response generation
     const queryType = this.identifyQueryType(normalizedMsg);
-    const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
+    
+    // Handle specific query types with targeted responses
+    if (queryType === 'pricing') {
+      return this.handlePricingQuery(normalizedMsg, originalMsg);
+    } else if (queryType === 'services') {
+      return this.handleServicesQuery(normalizedMsg, originalMsg);
+    } else if (queryType === 'booking') {
+      return this.handleBookingQuery();
+    } else if (queryType === 'location') {
+      return this.handleLocationQuery();
+    } else if (queryType === 'hours') {
+      return this.handleHoursQuery();
+    } else if (queryType === 'contact') {
+      return this.handleContactQuery();
+    }
 
+    // General query handling
+    const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
     if (relevantInfo && relevantInfo.length > 10) {
       return this.formatResponse(relevantInfo, queryType);
     }
 
-    // Intelligent fallback with context awareness
     return this.generateSmartFallback(originalMsg, queryType);
+  }
+
+  // FIXED: Specific handlers for different query types
+  handlePricingQuery(normalizedMsg, originalMsg) {
+    // Look for specific price information in the business data
+    const priceInfo = this.extractPriceInfo();
+    
+    if (priceInfo) {
+      return `Here's our pricing information: 💰\n\n${priceInfo}\n\n📞 For the most current pricing and special packages, please give us a call or visit our location!`;
+    }
+    
+    return `I'd love to help you with pricing information! 💰\n\nFor current prices on our nail services, please:\n\n📞 Call us directly for accurate pricing\n📍 Visit our spa for a consultation\n💻 Check our website or social media for current rates\n\nOur pricing varies based on the specific treatments you choose. Would you like to know about any particular service?`;
+  }
+
+  handleServicesQuery(normalizedMsg, originalMsg) {
+    const serviceInfo = this.extractServiceInfo();
+    
+    if (serviceInfo) {
+      return `Here are our nail services: 💅\n\n${serviceInfo}\n\nWould you like more details about any specific treatment?`;
+    }
+    
+    return `We offer a full range of professional nail services! 💅✨\n\nOur typical services include:\n• Professional manicures & pedicures\n• Gel polish application & removal\n• Nail art & custom designs\n• Nail extensions & repairs\n• Relaxing spa treatments\n\nFor our complete service menu with details, please visit us or give us a call! What type of nail service interests you most?`;
+  }
+
+  handleBookingQuery() {
+    const bookingInfo = this.extractBookingInfo();
+    
+    if (bookingInfo) {
+      return `Here's how to book with us: 📅\n\n${bookingInfo}`;
+    }
+    
+    return `I'd be happy to help you schedule an appointment! 📅\n\nTo book your nail service:\n📞 Call us directly for immediate booking\n📍 Visit our location\n💻 Check if we have online booking available\n\nWe typically accommodate same-day appointments based on availability. What day were you thinking of visiting?`;
+  }
+
+  handleLocationQuery() {
+    const locationInfo = this.extractLocationInfo();
+    
+    if (locationInfo) {
+      return `Here's our location: 📍\n\n${locationInfo}`;
+    }
+    
+    return `We're conveniently located and easy to find! 📍\n\nFor exact directions and our address, please check our website or give us a call. We're easily accessible and look forward to welcoming you!`;
+  }
+
+  handleHoursQuery() {
+    const hoursInfo = this.extractHoursInfo();
+    
+    if (hoursInfo) {
+      return `Here are our operating hours: ⏰\n\n${hoursInfo}`;
+    }
+    
+    return `We're open to serve you throughout the week! ⏰\n\nFor our current operating hours, please:\n📞 Call us directly\n📍 Check our location signage\n💻 Visit our website or social media\n\nWe typically operate Monday through Saturday with convenient hours. Give us a call to confirm today's availability!`;
+  }
+
+  handleContactQuery() {
+    const contactInfo = this.extractContactInfo();
+    
+    if (contactInfo) {
+      return `Here's how to reach us: 📞\n\n${contactInfo}`;
+    }
+    
+    return `We'd love to hear from you! 📞\n\nTo get in touch:\n📞 Call us during business hours\n📍 Visit our spa location\n💻 Connect via our website or social media\n\nWe're here to answer any questions and help you schedule your perfect nail service!`;
+  }
+
+  // FIXED: Improved information extraction methods
+  extractPriceInfo() {
+    const pricePattern = /\$\d+|\d+\s*(?:dollar|$)/gi;
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const priceRelated = sentences.filter(sentence => 
+      pricePattern.test(sentence) && 
+      !this.isLocationOrContact(sentence)
+    );
+    
+    return priceRelated.length > 0 ? priceRelated.join('. ').trim() : null;
+  }
+
+  extractServiceInfo() {
+    const serviceKeywords = ['manicure', 'pedicure', 'nail', 'polish', 'gel', 'acrylic', 'treatment', 'service', 'spa'];
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const serviceRelated = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return serviceKeywords.some(keyword => lower.includes(keyword)) && 
+             !this.isLocationOrContact(sentence) &&
+             !lower.includes('phone') &&
+             !lower.includes('address');
+    });
+    
+    return serviceRelated.length > 0 ? serviceRelated.slice(0, 3).join('. ').trim() : null;
+  }
+
+  extractBookingInfo() {
+    const bookingKeywords = ['book', 'appointment', 'schedule', 'call', 'visit', 'online'];
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const bookingRelated = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return bookingKeywords.some(keyword => lower.includes(keyword)) && 
+             !this.isLocationOrContact(sentence);
+    });
+    
+    return bookingRelated.length > 0 ? bookingRelated.slice(0, 2).join('. ').trim() : null;
+  }
+
+  extractLocationInfo() {
+    const locationKeywords = ['address', 'location', 'located', 'road', 'street', 'complex', 'kingston'];
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const locationRelated = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return locationKeywords.some(keyword => lower.includes(keyword)) && 
+             !lower.includes('phone') &&
+             !lower.includes('email');
+    });
+    
+    return locationRelated.length > 0 ? locationRelated.slice(0, 2).join('. ').trim() : null;
+  }
+
+  extractHoursInfo() {
+    const hoursKeywords = ['hour', 'open', 'close', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'am', 'pm'];
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const hoursRelated = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return hoursKeywords.some(keyword => lower.includes(keyword)) && 
+             !this.isLocationOrContact(sentence);
+    });
+    
+    return hoursRelated.length > 0 ? hoursRelated.slice(0, 2).join('. ').trim() : null;
+  }
+
+  extractContactInfo() {
+    const contactKeywords = ['phone', 'call', 'contact', 'email', 'instagram', 'social'];
+    const sentences = this.businessInfo.split(/[.!?]+/);
+    
+    const contactRelated = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return contactKeywords.some(keyword => lower.includes(keyword)) && 
+             !lower.includes('address') &&
+             !lower.includes('location');
+    });
+    
+    return contactRelated.length > 0 ? contactRelated.slice(0, 3).join('. ').trim() : null;
+  }
+
+  // Helper method to identify location/contact info that shouldn't appear in other responses
+  isLocationOrContact(sentence) {
+    const lower = sentence.toLowerCase();
+    return lower.includes('oakland apartment') || 
+           lower.includes('constant spring road') || 
+           lower.includes('kingston') ||
+           lower.includes('block f') ||
+           lower.includes('phone:') ||
+           lower.includes('email:') ||
+           lower.includes('instagram:');
   }
 
   isGreeting(msg) {
@@ -3262,7 +3423,6 @@ class SmartChatbot {
   }
 
   identifyQueryType(msg) {
-    // FIXED: Enhanced keyword matching with better spa-specific terms
     const enhancedKeywords = {
       ...this.config.keywords,
       services: [...this.config.keywords.services, 'nail', 'manicure', 'pedicure', 'polish', 'gel', 'acrylic', 'treatment', 'spa'],
@@ -3276,7 +3436,6 @@ class SmartChatbot {
       }
     }
     
-    // FIXED: More specific pattern recognition
     if (/what.*(?:services|treatments|do you|nail)/.test(msg)) return 'services';
     if (/how.*much|cost|price|expensive|afford/.test(msg)) return 'pricing';
     if (/book|appointment|schedule|available|when.*can/.test(msg)) return 'booking';
@@ -3289,38 +3448,33 @@ class SmartChatbot {
 
   extractRelevantInfo(query, queryType) {
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    // FIXED: Better text splitting that preserves sentences
     const sentences = this.businessInfo.split(/[.!?]+/).filter(line => line.trim().length > 10);
     
     let bestMatches = [];
     
     for (let sentence of sentences) {
       const sentenceLower = sentence.toLowerCase().trim();
-      if (sentenceLower.length < 5) continue; // Skip very short fragments
+      if (sentenceLower.length < 5) continue;
       
       let score = 0;
       
-      // FIXED: More accurate word matching
       queryWords.forEach(word => {
         if (sentenceLower.includes(word.toLowerCase())) {
-          score += 3; // Exact word match
+          score += 3;
         }
-        // Fuzzy matching for related terms
         if (word.length > 4 && sentenceLower.includes(word.substring(0, word.length - 1))) {
           score += 1;
         }
       });
       
-      // FIXED: Better keyword matching for query types
       if (queryType && this.config.keywords[queryType]) {
         this.config.keywords[queryType].forEach(keyword => {
           if (sentenceLower.includes(keyword.toLowerCase())) {
-            score += 5; // Higher weight for category matches
+            score += 5;
           }
         });
       }
       
-      // FIXED: Bonus for sentences that look like they contain useful info
       if (sentenceLower.includes('$') || sentenceLower.match(/\d+/)) score += 2;
       if (sentenceLower.includes(this.config.businessName.toLowerCase())) score += 2;
       if (sentenceLower.includes('nail') || sentenceLower.includes('spa')) score += 1;
@@ -3334,7 +3488,6 @@ class SmartChatbot {
     
     if (bestMatches.length === 0) return null;
     
-    // FIXED: Return top 2 most relevant sentences, properly formatted
     const topMatches = bestMatches.slice(0, 2);
     return topMatches.map(match => match.text).join('. ').substring(0, 400);
   }
@@ -3342,7 +3495,6 @@ class SmartChatbot {
   formatResponse(info, queryType) {
     let response = info;
     
-    // Add contextual closing based on query type
     const contextualEndings = {
       booking: " 📅 Feel free to call us to schedule your appointment!",
       pricing: " 💰 Contact us for current pricing and any special packages!",
@@ -3360,7 +3512,6 @@ class SmartChatbot {
   }
 
   generateSmartFallback(originalMsg, queryType) {
-    // FIXED: More specific fallback responses based on what user might be asking
     const specificFallbacks = {
       services: `I can help you learn about our nail services! 💅 Try asking:
       
@@ -3414,16 +3565,6 @@ class SmartChatbot {
     
     return specificFallbacks[queryType] || specificFallbacks.general;
   }
-
-  // FIXED: Add method to test if Google Docs is accessible
-  async testDocumentAccess() {
-    try {
-      const response = await fetch(this.config.docUrl.replace(/\/edit.*$/, '/export?format=txt'));
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
 }
 
 // Add CSS animation for smooth message appearance
@@ -3446,11 +3587,9 @@ document.head.appendChild(style);
 // INITIALIZE CHATBOT
 // ================================================================
 
-// Initialize the chatbot when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.smartChatbot = new SmartChatbot(CHATBOT_CONFIG);
 });
-
 
   </script>
 </body>
