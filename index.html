@@ -2963,231 +2963,316 @@ ${orderSummary}
 }
 
 
-  const chatBtn = document.getElementById("chatbotBtn");
-  const chatWin = document.getElementById("chatWindow");
-  const closeChat = document.getElementById("closeChat");
-  const chatMsgs = document.getElementById("chatMessages");
-  const chatInput = document.getElementById("chatInput");
-  const sendBtn = document.getElementById("sendBtn");
+  // 🚀 VERSATILE AI CHATBOT - Copy & Paste for Any Business
 
-  let businessInfo = "";
-  let conversationStarted = false;
+const CHATBOT_CONFIG = {
+  // 🔹 REQUIRED: Replace with your Google Docs public URL
+  docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk",
+  
+  // 🔹 Business Details (Customize per niche)
+  businessName: "Nails by Rissa Spa", 
+  businessType: "spa", // spa, restaurant, gym, salon, shop, etc.
+  greeting: "Hi! I'm here to help you with any questions about our spa services. What would you like to know?",
+  
+  // 🔹 Fallback responses when no exact match is found
+  fallbackResponses: [
+    "I'd be happy to help! Could you ask about something specific like our services, prices, booking, or location?",
+    "I'm here to help with questions about our {businessType} services. What would you like to know?",
+    "Feel free to ask about our treatments, pricing, location, or how to book!"
+  ],
 
-  // 🔹 Replace with your PUBLIC Google Docs link (set to Anyone with link → Viewer)
-  const docUrl = "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk";
+  // 🔹 Smart keyword categories (automatically adapts to business type)
+  keywords: {
+    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i'],
+    pricing: ['price', 'cost', 'how much', 'fee', 'charge', 'rate', '$', 'money', 'expensive'],
+    services: ['service', 'what do you', 'offer', 'available', 'menu', 'treatment', 'do you have'],
+    location: ['location', 'where', 'address', 'find you', 'directions', 'how to get'],
+    hours: ['hours', 'open', 'closed', 'time', 'when', 'operating'],
+    contact: ['contact', 'phone', 'call', 'reach', 'number', 'email']
+  }
+};
 
-  // Load Google Doc content
-  fetch(docUrl)
-    .then(res => res.text())
-    .then(text => businessInfo = text)
-    .catch(err => {
-      console.error("Failed to load Google Doc:", err);
-      businessInfo = "Sorry, business info not available right now.";
-    });
+// ================================================================
+// CORE CHATBOT ENGINE - NO NEED TO MODIFY
+// ================================================================
 
-  // Toggle chat open/close
-  chatBtn.onclick = () => {
-    chatWin.style.display = "flex";
-    if (!conversationStarted) {
-      addMessage("Bot", "Hi! I'm here to help you with any questions about our spa services. What would you like to know?");
-      conversationStarted = true;
-    }
-  };
-  closeChat.onclick = () => {
-    chatWin.style.display = "none";
-  };
-
-  // Handle sending
-  function sendMessage() {
-    const msg = chatInput.value.trim();
-    if (!msg) return;
-    addMessage("You", msg);
-    chatInput.value = "";
-    setTimeout(() => respond(msg), 500); // Small delay for natural feel
+class SmartChatbot {
+  constructor(config) {
+    this.config = config;
+    this.businessInfo = "";
+    this.conversationStarted = false;
+    this.context = [];
+    this.initializeElements();
+    this.loadBusinessData();
   }
 
-  sendBtn.onclick = sendMessage;
-  chatInput.addEventListener("keypress", e => {
-    if (e.key === "Enter") sendMessage();
-  });
+  initializeElements() {
+    this.chatBtn = document.getElementById("chatbotBtn");
+    this.chatWin = document.getElementById("chatWindow");
+    this.closeChat = document.getElementById("closeChat");
+    this.chatMsgs = document.getElementById("chatMessages");
+    this.chatInput = document.getElementById("chatInput");
+    this.sendBtn = document.getElementById("sendBtn");
+    this.bindEvents();
+  }
 
-  // Display messages with better styling
-  function addMessage(sender, text) {
+  bindEvents() {
+    this.chatBtn.onclick = () => this.openChat();
+    this.closeChat.onclick = () => this.closeChat();
+    this.sendBtn.onclick = () => this.sendMessage();
+    this.chatInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") this.sendMessage();
+    });
+  }
+
+  async loadBusinessData() {
+    try {
+      // Convert Google Docs edit URL to export URL
+      const exportUrl = this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt');
+      const response = await fetch(exportUrl);
+      const text = await response.text();
+      this.businessInfo = this.cleanDocumentText(text);
+      console.log("✅ Business data loaded successfully");
+    } catch (error) {
+      console.error("❌ Failed to load business data:", error);
+      this.businessInfo = "I'm having trouble accessing our current information. Please contact us directly for the most up-to-date details.";
+    }
+  }
+
+  cleanDocumentText(text) {
+    return text
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s$.,!?:;()-]/g, '')
+      .trim();
+  }
+
+  openChat() {
+    this.chatWin.style.display = "flex";
+    if (!this.conversationStarted) {
+      this.addMessage("Bot", this.config.greeting);
+      this.conversationStarted = true;
+    }
+  }
+
+  closeChatWindow() {
+    this.chatWin.style.display = "none";
+  }
+
+  sendMessage() {
+    const msg = this.chatInput.value.trim();
+    if (!msg) return;
+    
+    this.addMessage("You", msg);
+    this.chatInput.value = "";
+    this.context.push(msg);
+    
+    // Keep context manageable (last 5 messages)
+    if (this.context.length > 5) {
+      this.context.shift();
+    }
+    
+    setTimeout(() => this.generateResponse(msg), 300);
+  }
+
+  addMessage(sender, text) {
     const bubble = document.createElement("div");
     const isBot = sender === "Bot";
+    
     bubble.style.cssText = `
-      margin: 8px 0;
-      padding: 10px 12px;
-      border-radius: 12px;
-      max-width: 85%;
+      margin: 10px 0;
+      padding: 12px 15px;
+      border-radius: 18px;
+      max-width: 80%;
       word-wrap: break-word;
+      line-height: 1.4;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       ${isBot ? 
-        'background: #f0f0f0; color: #333; margin-right: auto;' : 
-        'background: #E58BBE; color: white; margin-left: auto; text-align: right;'
+        'background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); color: #333; margin-right: auto; border: 1px solid #dee2e6;' : 
+        'background: linear-gradient(135deg, #E58BBE 0%, #d63384 100%); color: white; margin-left: auto; text-align: right;'
       }
     `;
-    bubble.innerHTML = `${isBot ? '<b>🤖:</b> ' : '<b>You:</b> '}${text}`;
-    chatMsgs.appendChild(bubble);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    
+    bubble.innerHTML = `
+      <div style="font-weight: 500; font-size: 12px; margin-bottom: 4px; opacity: 0.8;">
+        ${isBot ? '🤖 Assistant' : '👤 You'}
+      </div>
+      <div>${this.formatMessage(text)}</div>
+    `;
+    
+    this.chatMsgs.appendChild(bubble);
+    this.chatMsgs.scrollTop = this.chatMsgs.scrollHeight;
   }
 
-  // Enhanced chatbot logic
-  function respond(userMessage) {
-    if (!businessInfo) {
-      addMessage("Bot", "I'm still loading our information. Please give me a moment!");
+  formatMessage(text) {
+    // Add line breaks and format currency
+    return text
+      .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$$1</strong>')
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  generateResponse(userMessage) {
+    if (!this.businessInfo) {
+      this.addMessage("Bot", "I'm still loading our information. Please give me a moment!");
       return;
     }
 
     const msg = userMessage.toLowerCase().trim();
-    
-    // Handle greetings
-    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
-    if (greetings.some(greeting => msg.includes(greeting))) {
-      addMessage("Bot", "Hello! Welcome to our spa. I'm here to help you with information about our services, prices, booking, and more. What can I help you with?");
-      return;
-    }
-
-    // Handle thanks
-    if (msg.includes('thank') || msg.includes('thanks')) {
-      addMessage("Bot", "You're very welcome! Is there anything else you'd like to know about our spa services?");
-      return;
-    }
-
-    // Handle booking questions
-    if (isAbout(msg, ['book', 'appointment', 'schedule', 'reserve', 'available'])) {
-      const bookingInfo = findBestMatch(businessInfo, ['booking', 'appointment', 'schedule', 'hours', 'available']);
-      if (bookingInfo) {
-        addMessage("Bot", bookingInfo + " You can also click the BOOKING section in our menu to book online!");
-      } else {
-        addMessage("Bot", "To book an appointment, you can use the BOOKING section in our menu above, or contact us directly. We're open Monday-Saturday 8AM-8PM, closed Sundays.");
-      }
-      return;
-    }
-
-    // Handle price questions
-    if (isAbout(msg, ['price', 'cost', 'how much', 'fee', 'charge', 'rate'])) {
-      const priceInfo = findBestMatch(businessInfo, ['price', 'cost', '$', 'fee', 'rate']);
-      if (priceInfo) {
-        addMessage("Bot", priceInfo + " You can see all our services and prices in the booking section too!");
-      } else {
-        addMessage("Bot", "Our prices vary by service. For example, massages start around $8,500, facials from $7,500, and nail services from $3,500. Check our booking section for complete pricing!");
-      }
-      return;
-    }
-
-    // Handle service questions
-    if (isAbout(msg, ['service', 'massage', 'facial', 'nail', 'wax', 'sauna', 'treatment', 'what do you offer'])) {
-      const serviceInfo = findBestMatch(businessInfo, ['service', 'massage', 'facial', 'nail', 'wax', 'sauna', 'treatment', 'offer']);
-      if (serviceInfo) {
-        addMessage("Bot", serviceInfo);
-      } else {
-        addMessage("Bot", "We offer full spa services including: Swedish & Deep Tissue Massages, European & Anti-aging Facials, Manicures & Pedicures, Full Body Waxing, Sauna Sessions, and Body Treatments. What specific service interests you?");
-      }
-      return;
-    }
-
-    // Handle location questions
-    if (isAbout(msg, ['location', 'where', 'address', 'find you', 'directions'])) {
-      addMessage("Bot", "We're located at Oakland Apartment Complex 114 1/2 116, Constant Spring Rd, Kingston 8, Jamaica, Block F. You can click the location button 📍 in our header for directions!");
-      return;
-    }
-
-    // Handle hours questions
-    if (isAbout(msg, ['hours', 'open', 'closed', 'time', 'when'])) {
-      addMessage("Bot", "We're open Monday through Saturday from 8:00 AM to 8:00 PM. We're closed on Sundays. Perfect time for some self-care!");
-      return;
-    }
-
-    // Handle contact questions
-    if (isAbout(msg, ['contact', 'phone', 'call', 'reach', 'number'])) {
-      const contactInfo = findBestMatch(businessInfo, ['phone', 'contact', 'call', 'number']);
-      if (contactInfo) {
-        addMessage("Bot", contactInfo);
-      } else {
-        addMessage("Bot", "You can reach us through our booking system here on the website, or follow us on Instagram @nails_byrissa for updates and contact info!");
-      }
-      return;
-    }
-
-    // Try to find relevant information from the document
-    const relevantInfo = findRelevantInfo(msg, businessInfo);
-    if (relevantInfo) {
-      addMessage("Bot", relevantInfo);
-    } else {
-      // Friendly fallback responses
-      const fallbacks = [
-        "I'd be happy to help! Could you ask about something specific like our services, prices, booking, or location?",
-        "I'm here to help with questions about our spa services. Try asking about massages, facials, nails, or booking an appointment!",
-        "I want to give you the best information! Could you be more specific about what you'd like to know?",
-        "Feel free to ask about our spa treatments, pricing, location, or how to book an appointment!"
-      ];
-      const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-      addMessage("Bot", randomFallback);
-    }
+    const response = this.processQuery(msg, userMessage);
+    this.addMessage("Bot", response);
   }
 
-  // Helper function to check if message is about certain topics
-  function isAbout(message, keywords) {
-    return keywords.some(keyword => message.includes(keyword));
+  processQuery(normalizedMsg, originalMsg) {
+    // Handle conversational elements first
+    if (this.isGreeting(normalizedMsg)) {
+      return `Hello! Welcome to ${this.config.businessName}. I'm here to help you with information about our services, prices, booking, and more. What can I help you with?`;
+    }
+
+    if (this.isThanking(normalizedMsg)) {
+      return "You're very welcome! Is there anything else you'd like to know?";
+    }
+
+    if (this.isGoodbye(normalizedMsg)) {
+      return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you!`;
+    }
+
+    // Process specific queries
+    const queryType = this.identifyQueryType(normalizedMsg);
+    const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
+
+    if (relevantInfo && relevantInfo.length > 10) {
+      return this.formatResponse(relevantInfo, queryType);
+    }
+
+    // Intelligent fallback with context awareness
+    return this.generateSmartFallback(originalMsg, queryType);
   }
 
-  // Enhanced function to find best matching information
-  function findBestMatch(content, keywords) {
-    const lines = content.split('\n').filter(line => line.trim());
-    let bestMatch = '';
-    let maxScore = 0;
+  isGreeting(msg) {
+    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'hola'];
+    return greetings.some(greeting => msg.includes(greeting));
+  }
 
-    for (let line of lines) {
-      let score = 0;
-      const lineLower = line.toLowerCase();
-      
-      for (let keyword of keywords) {
-        if (lineLower.includes(keyword.toLowerCase())) {
-          score += keyword.length;
-        }
-      }
-      
-      if (score > maxScore && line.trim().length > 10) {
-        maxScore = score;
-        bestMatch = line.trim();
+  isThanking(msg) {
+    return msg.includes('thank') || msg.includes('thanks') || msg.includes('appreciate');
+  }
+
+  isGoodbye(msg) {
+    const goodbyes = ['bye', 'goodbye', 'see you', 'talk later', 'thanks again'];
+    return goodbyes.some(goodbye => msg.includes(goodbye));
+  }
+
+  identifyQueryType(msg) {
+    for (const [type, keywords] of Object.entries(this.config.keywords)) {
+      if (keywords.some(keyword => msg.includes(keyword))) {
+        return type;
       }
     }
     
-    return bestMatch || null;
+    // Advanced pattern recognition
+    if (/what.*do.*you.*(?:have|offer|provide)/.test(msg)) return 'services';
+    if (/how.*(?:much|expensive|cost)/.test(msg)) return 'pricing';
+    if (/(?:when|what time).*open/.test(msg)) return 'hours';
+    if (/where.*(?:located|find)/.test(msg)) return 'location';
+    
+    return 'general';
   }
 
-  // Function to find relevant information with fuzzy matching
-  function findRelevantInfo(userMessage, content) {
-    const words = userMessage.split(' ').filter(word => word.length > 2);
-    const lines = content.split('\n').filter(line => line.trim().length > 10);
+  extractRelevantInfo(query, queryType) {
+    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+    const lines = this.businessInfo.split(/[.!?]+/).filter(line => line.trim().length > 15);
     
-    let bestMatch = '';
-    let maxScore = 0;
+    let bestMatches = [];
     
     for (let line of lines) {
-      let score = 0;
       const lineLower = line.toLowerCase();
+      let score = 0;
       
-      for (let word of words) {
-        if (lineLower.includes(word.toLowerCase())) {
-          score += 1;
-        }
-        
-        // Fuzzy matching for common misspellings/variations
-        if (word.includes('massag') && lineLower.includes('massage')) score += 2;
-        if (word.includes('facial') && lineLower.includes('facial')) score += 2;
-        if (word.includes('nail') && lineLower.includes('nail')) score += 2;
-        if (word.includes('price') && (lineLower.includes('$') || lineLower.includes('cost'))) score += 2;
+      // Score based on query words
+      queryWords.forEach(word => {
+        if (lineLower.includes(word)) score += 2;
+        if (lineLower.includes(word.substring(0, Math.max(4, word.length - 2)))) score += 1;
+      });
+      
+      // Bonus for query type keywords
+      if (queryType && this.config.keywords[queryType]) {
+        this.config.keywords[queryType].forEach(keyword => {
+          if (lineLower.includes(keyword)) score += 3;
+        });
       }
       
-      if (score > maxScore && score > 0) {
-        maxScore = score;
-        bestMatch = line.trim();
+      if (score > 0) {
+        bestMatches.push({ text: line.trim(), score });
       }
     }
     
-    return maxScore >= 2 ? bestMatch : null;
+    bestMatches.sort((a, b) => b.score - a.score);
+    
+    // Return top matches, combined intelligently
+    const topMatches = bestMatches.slice(0, 3);
+    if (topMatches.length === 0) return null;
+    
+    if (topMatches.length === 1) {
+      return topMatches[0].text;
+    }
+    
+    // Combine related information
+    return topMatches
+      .map(match => match.text)
+      .join(' ')
+      .substring(0, 300); // Limit response length
   }
+
+  formatResponse(info, queryType) {
+    let response = info;
+    
+    // Add contextual closing based on query type
+    const contextualEndings = {
+      booking: " You can also use our online booking system for instant confirmation!",
+      pricing: " Contact us for any package deals or special offers!",
+      services: " Would you like to know more about any specific service?",
+      location: " Feel free to reach out if you need detailed directions!",
+      hours: " We look forward to welcoming you during our operating hours!"
+    };
+    
+    if (contextualEndings[queryType] && response.length < 200) {
+      response += contextualEndings[queryType];
+    }
+    
+    return response;
+  }
+
+  generateSmartFallback(originalMsg, queryType) {
+    const fallbacks = this.config.fallbackResponses;
+    let response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    
+    // Customize fallback based on query type
+    const suggestions = {
+      general: "Try asking about our services, pricing, location, or booking information!",
+      services: "Ask me about specific treatments or services you're interested in!",
+      pricing: "Feel free to ask about costs for specific services!",
+      booking: "I can help you with appointment and scheduling information!",
+      location: "Need directions or information about our location?",
+      hours: "Want to know when we're open? Just ask!"
+    };
+    
+    if (suggestions[queryType]) {
+      response += " " + suggestions[queryType];
+    }
+    
+    // Replace placeholders
+    response = response.replace('{businessType}', this.config.businessType);
+    response = response.replace('{businessName}', this.config.businessName);
+    
+    return response;
+  }
+}
+    
+// Initialize the chatbot when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  window.smartChatbot = new SmartChatbot(CHATBOT_CONFIG);
+});
     
   </script>
 </body>
