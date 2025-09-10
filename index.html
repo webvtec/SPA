@@ -2992,17 +2992,40 @@ class SmartChatbot {
   }
 
   async loadBusinessData() {
-    try {
-      const res = await fetch(this.config.docUrl);
-      if (!res.ok) throw new Error("Doc fetch failed");
-      const text = await res.text();
-      this.businessInfo = text.replace(/\s+/g, " ").trim();
-      console.log("✅ Business info loaded");
-    } catch (err) {
-      console.error("❌ Couldn’t load Google Doc", err);
-      this.businessInfo = "";
-    }
+  try {
+    const res = await fetch(this.config.docUrl);
+    if (!res.ok) throw new Error("Doc fetch failed");
+    let text = await res.text();
+
+    // 🔹 Clean up messy Google Docs formatting
+    this.businessInfo = this.cleanText(text);
+
+    console.log("✅ Business info loaded and cleaned");
+  } catch (err) {
+    console.error("❌ Couldn’t load Google Doc", err);
+    this.businessInfo = "";
   }
+}
+
+cleanText(text) {
+  return text
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, " ")
+    // Remove CSS garbage
+    .replace(/[\w-]+:[^;"]+;?/g, " ")
+    // Remove weird Google Docs spans
+    .replace(/(orphans|widows):\d+;/gi, " ")
+    // Decode HTML entities
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    // Remove extra symbols and whitespace
+    .replace(/[*•·►]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 
   async initAI() {
     try {
