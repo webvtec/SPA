@@ -309,6 +309,182 @@
   z-index: 10000;
 }
 
+
+
+
+
+/* Chatbot Styles - Add to existing <style> section */
+.chatbot-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.chatbot-toggle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FE5DC7, #61134A);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease;
+}
+
+.chatbot-toggle:hover {
+  transform: scale(1.1);
+}
+
+.chatbot-toggle span {
+  color: white;
+  font-size: 24px;
+}
+
+.chatbot-window {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 320px;
+  height: 400px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chatbot-header {
+  background: linear-gradient(135deg, #FE5DC7, #61134A);
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+
+.chatbot-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chatbot-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: #f9f9f9;
+}
+
+.chatbot-message {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.chatbot-message.user {
+  justify-content: flex-end;
+}
+
+.chatbot-message .message-content {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.chatbot-message.bot .message-content {
+  background: #FE5DC7;
+  color: white;
+  border-bottom-left-radius: 4px;
+}
+
+.chatbot-message.user .message-content {
+  background: #61134A;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chatbot-input-container {
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 8px;
+}
+
+.chatbot-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  outline: none;
+  font-size: 14px;
+}
+
+.chatbot-send {
+  background: #FE5DC7;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.chatbot-typing {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #FE5DC7;
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+  max-width: 80%;
+}
+
+.chatbot-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: white;
+  animation: typing 1.5s infinite;
+}
+
+.chatbot-typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chatbot-typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
     
   </style>
 </head>
@@ -640,6 +816,43 @@
     </button>
 </div>
 </div>
+
+
+    <!-- Chatbot HTML - Add before closing </body> tag -->
+<div class="chatbot-container">
+  <button class="chatbot-toggle" onclick="toggleChat()">
+    <span id="chatbot-icon">💬</span>
+  </button>
+  
+  <div class="chatbot-window" id="chatbot-window">
+    <div class="chatbot-header">
+      <span>Chat with us!</span>
+      <button class="chatbot-close" onclick="closeChat()">×</button>
+    </div>
+    
+    <div class="chatbot-messages" id="chatbot-messages">
+      <div class="chatbot-message bot">
+        <div class="message-content">
+          Hi! Welcome to NAILUXE NAILZ BY NAVIA! 😊 How can I help you today?
+        </div>
+      </div>
+    </div>
+    
+    <div class="chatbot-input-container">
+      <input 
+        type="text" 
+        class="chatbot-input" 
+        id="chatbot-input" 
+        placeholder="Type your message..."
+        onkeypress="handleChatKeyPress(event)"
+      />
+      <button class="chatbot-send" onclick="sendChatMessage()">
+        ➤
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ✅ Scripts -->
 <script>
     let currentUser = null;
@@ -1870,6 +2083,240 @@ function getSelectedServices() {
   return services.length > 0 ? services.join(', ') : 'No services selected';
 }
 
+// Chatbot Configuration - EASILY CUSTOMIZABLE FOR OTHER BUSINESSES
+const CHATBOT_CONFIG = {
+  businessName: "NAILUXE NAILZ BY NAVIA",
+  location: "Shop #4, 1 Wesley road cheago plaza, Angellace beauty salon, Mandeville, Jamaica",
+  openingHours: {
+    Monday: "9:00 AM - 6:00 PM",
+    Tuesday: "Closed",
+    Wednesday: "9:00 AM - 6:00 PM", 
+    Thursday: "9:00 AM - 6:00 PM",
+    Friday: "9:00 AM - 6:00 PM",
+    Saturday: "9:00 AM - 6:00 PM",
+    Sunday: "Closed"
+  },
+  socialMedia: {
+    instagram: "@nailz_by_navia",
+    tiktok: "@nailzbynavia"
+  },
+  services: {
+    "Manicure & Pedicure": [
+      { name: "Female Manicure", price: "$2,000+", duration: "30 minutes" },
+      { name: "Female Pedicure", price: "$3,000", duration: "45 minutes" },
+      { name: "Men's Manicure", price: "$2,000", duration: "30 minutes" },
+      { name: "Men's Pedicure", price: "$5,000", duration: "60 minutes" }
+    ],
+    "Polish & Art": [
+      { name: "Gel Polish Fingers", price: "$3,000", duration: "30 minutes" },
+      { name: "Gel Polish Toes", price: "$2,000+", duration: "30 minutes" },
+      { name: "French Toes", price: "$2,500+", duration: "45 minutes" },
+      { name: "Hand Painted French", price: "$2,000+", duration: "45 minutes" },
+      { name: "Nail Art", price: "$300+", duration: "15 minutes" }
+    ],
+    "Acrylic Services": [
+      { name: "XL Full Set", price: "$8,000+", duration: "90 minutes" },
+      { name: "Long Full Set", price: "$7,000+", duration: "45 minutes" },
+      { name: "Medium Full Set", price: "$6,000+", duration: "60 minutes" },
+      { name: "Short Full Set", price: "$5,000+", duration: "60 minutes" },
+      { name: "Coffin", price: "$6,000+", duration: "60 minutes" },
+      { name: "Nail Overlay (Short)", price: "$4,500+", duration: "45 minutes" }
+    ],
+    "Gel Services": [
+      { name: "Gel X (Long)", price: "$7,500+", duration: "75 minutes" },
+      { name: "Gel X (Medium)", price: "$6,500+", duration: "75 minutes" },
+      { name: "Rebalanced Structured Gel", price: "$5,500+", duration: "60 minutes" }
+    ]
+  }
+};
+
+// Chatbot Functions
+function toggleChat() {
+  const window = document.getElementById('chatbot-window');
+  const icon = document.getElementById('chatbot-icon');
+  
+  if (window.style.display === 'flex') {
+    closeChat();
+  } else {
+    window.style.display = 'flex';
+    icon.textContent = '×';
+    document.getElementById('chatbot-input').focus();
+  }
+}
+
+function closeChat() {
+  const window = document.getElementById('chatbot-window');
+  const icon = document.getElementById('chatbot-icon');
+  
+  window.style.display = 'none';
+  icon.textContent = '💬';
+}
+
+function handleChatKeyPress(event) {
+  if (event.key === 'Enter') {
+    sendChatMessage();
+  }
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatbot-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  addChatMessage(message, 'user');
+  input.value = '';
+  
+  showTypingIndicator();
+  
+  setTimeout(() => {
+    hideTypingIndicator();
+    const response = generateChatResponse(message);
+    addChatMessage(response, 'bot');
+  }, 1000 + Math.random() * 1000);
+}
+
+function addChatMessage(message, sender) {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chatbot-message ${sender}`;
+  
+  messageDiv.innerHTML = `
+    <div class="message-content">${message}</div>
+  `;
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTypingIndicator() {
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'chatbot-message bot';
+  typingDiv.id = 'typing-indicator';
+  
+  typingDiv.innerHTML = `
+    <div class="chatbot-typing">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const typingIndicator = document.getElementById('typing-indicator');
+  if (typingIndicator) {
+    typingIndicator.remove();
+  }
+}
+
+// Simple spell check function
+function normalizeText(text) {
+  const corrections = {
+    'hrs': 'hours', 'hr': 'hour', 'opning': 'opening', 'oepn': 'open',
+    'wher': 'where', 'wat': 'what', 'hw': 'how', 'servies': 'services',
+    'pric': 'price', 'cost': 'price', 'instgram': 'instagram', 'tiktoc': 'tiktok',
+    'bokking': 'booking', 'acount': 'account', 'apointment': 'appointment',
+    'mancure': 'manicure', 'pedicur': 'pedicure', 'acrilic': 'acrylic',
+    'nales': 'nails', 'locaton': 'location', 'adress': 'address'
+  };
+  
+  let normalized = text.toLowerCase();
+  Object.entries(corrections).forEach(([wrong, correct]) => {
+    normalized = normalized.replace(new RegExp(wrong, 'g'), correct);
+  });
+  
+  return normalized;
+}
+
+function generateChatResponse(message) {
+  const normalized = normalizeText(message);
+  
+  // Greeting responses
+  if (normalized.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
+    return `Hello! Welcome to ${CHATBOT_CONFIG.businessName}! How can I assist you today? 😊`;
+  }
+  
+  // Opening hours
+  if (normalized.includes('hours') || normalized.includes('open') || normalized.includes('close') || normalized.includes('time')) {
+    let hoursText = `Here are our opening hours:\n\n`;
+    Object.entries(CHATBOT_CONFIG.openingHours).forEach(([day, hours]) => {
+      hoursText += `${day}: ${hours}\n`;
+    });
+    hoursText += `\nWe're here to make you look fabulous! 💅`;
+    return hoursText;
+  }
+  
+  // Location/Address
+  if (normalized.includes('location') || normalized.includes('address') || normalized.includes('where')) {
+    return `You can find us at:\n📍 ${CHATBOT_CONFIG.location}\n\nClick the location pin 📍 at the top right of the page for directions!`;
+  }
+  
+  // Services and prices
+  if (normalized.includes('service') || normalized.includes('price') || normalized.includes('cost') || normalized.includes('nail') || normalized.includes('manicure') || normalized.includes('pedicure') || normalized.includes('acrylic')) {
+    let serviceText = `Here are our main services:\n\n`;
+    
+    Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
+      serviceText += `**${category}:**\n`;
+      services.slice(0, 3).forEach(service => { // Show first 3 of each category
+        serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
+      });
+      serviceText += `\n`;
+    });
+    
+    serviceText += `*Prices may vary based on complexity and are subject to change. Contact us for exact quotes! 💎`;
+    return serviceText;
+  }
+  
+  // Social media
+  if (normalized.includes('instagram') || normalized.includes('insta') || normalized.includes('tiktok') || normalized.includes('social')) {
+    return `Follow us on social media! 📱\n\n📸 Instagram: ${CHATBOT_CONFIG.socialMedia.instagram}\n🎵 TikTok: ${CHATBOT_CONFIG.socialMedia.tiktok}\n\nSee our latest nail art and get inspired! ✨`;
+  }
+  
+  // Website guidance
+  if (normalized.includes('booking') || normalized.includes('appointment') || normalized.includes('book')) {
+    return `To book an appointment:\n\n1. Click the menu button (☰) at top left\n2. Select "📅 BOOKING"\n3. Fill in your details and pick your services\n4. Choose your preferred date and time\n\nIt's that easy! 🎉`;
+  }
+  
+  if (normalized.includes('past booking') || normalized.includes('my booking') || normalized.includes('check booking')) {
+    return `To check your past bookings:\n\n1. Click the menu button (☰) at top left\n2. Select "MY BOOKINGS"\n3. You'll see your last 5 appointments and payment status\n\nYou need to be logged in to view your bookings! 🔐`;
+  }
+  
+  if (normalized.includes('payment') || normalized.includes('bank') || normalized.includes('transfer') || normalized.includes('pay')) {
+    return `For payment information:\n\n1. Click the menu button (☰) at top left\n2. Select "PAYMENT INFO"\n3. You'll see our bank transfer details\n\n💡 Always use your Booking # as the payment reference!`;
+  }
+  
+  if (normalized.includes('login') || normalized.includes('account') || normalized.includes('sign in')) {
+    return `To login or create an account, you'll be prompted when you try to book an appointment or submit a review. This helps us keep track of your bookings and preferences! 👤`;
+  }
+  
+  // General questions
+  if (normalized.includes('how long') || normalized.includes('duration')) {
+    return `Service durations vary:\n• Quick services (gel polish): 30 minutes\n• Full sets: 60-90 minutes\n• Detailed nail art: 15+ minutes per design\n\nWe'll give you an estimated time when you book! ⏰`;
+  }
+  
+  if (normalized.includes('deposit') || normalized.includes('down payment')) {
+    return `Deposits are handled on a case-by-case basis. You can pay via bank transfer using the payment info in our menu. Use your booking number as reference! 💳`;
+  }
+  
+  // Thank you/goodbye
+  if (normalized.match(/(thank|thanks|bye|goodbye)/)) {
+    return `You're welcome! Thanks for choosing ${CHATBOT_CONFIG.businessName}! Have a beautiful day! 💕✨`;
+  }
+  
+  // Default response
+  const defaultResponses = [
+    `I'd love to help! Could you be more specific? You can ask me about our services, prices, opening hours, location, or how to use the website! 😊`,
+    `I'm here to assist! Try asking about our nail services, booking process, opening hours, or location. What would you like to know? 💅`,
+    `Sorry, I didn't quite understand that. Feel free to ask about our services, prices, hours, location, or website features! How can I help? ✨`
+  ];
+  
+  return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+}
 
     
   </script>
