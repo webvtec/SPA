@@ -3024,69 +3024,92 @@ class SmartChatbot {
     }
   }
 
-  async getAnswer(userMessage) {
-    if (!this.businessInfo) {
-      return "Sorry, I don’t have business info right now.";
-    }
-
-    // ✅ Break info into sections by headers
-    const sections = {};
-    const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
-    let match;
-    while ((match = regex.exec(this.businessInfo)) !== null) {
-      sections[match[1].toLowerCase()] = match[2].trim();
-    }
-
-    const msg = userMessage.toLowerCase();
-
-    // ✅ Keyword routing
-    if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
-      return this.makeReply(msg, sections["hours"] || sections["location"]);
-    }
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee")) {
-      return this.makeReply(msg, sections["prices"]);
-    }
-    if (msg.includes("book") || msg.includes("appointment")) {
-      return this.makeReply(msg, sections["booking"]);
-    }
-    if (msg.includes("where") || msg.includes("location") || msg.includes("address")) {
-      return this.makeReply(msg, sections["location"]);
-    }
-
-    // Default: best fuzzy match
-    const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 10);
-    let bestLine = lines[0], bestScore = 0;
-    const words = msg.split(/\s+/);
-
-    for (let line of lines) {
-      let score = 0;
-      for (let w of words) {
-        if (line.toLowerCase().includes(w)) score++;
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        bestLine = line;
-      }
-    }
-
-    return this.makeReply(msg, bestLine);
+  // ✅ Extract clean sections (ignore the ## headings in final reply)
+async getAnswer(userMessage) {
+  if (!this.businessInfo) {
+    return "Sorry, I don’t have business info right now.";
   }
 
-  // ✅ Natural language polish
-  async makeReply(userMessage, context) {
-    if (!context) return "Hmm, I couldn’t find that info. Try asking another way.";
+  // Break info into sections
+  const sections = {};
+  const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
+  let match;
+  while ((match = regex.exec(this.businessInfo)) !== null) {
+    const key = match[1].toLowerCase().replace(/[^a-z ]/g, "").trim();
+    sections[key] = match[2].trim();
+  }
 
-    if (this.aiReady) {
+  const msg = userMessage.toLowerCase();
+
+  // ✅ Keyword routing
+  if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
+    return this.makeReply(msg, sections["operating hours"]);
+  }
+  if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("how much")) {
+    return this.makeReply(msg, sections["services & treatments"]);
+  }
+  if (msg.includes("book") || msg.includes("appointment") || msg.includes("reserve")) {
+    return this.makeReply(msg, sections["booking information"]);
+  }
+  if (msg.includes("where") || msg.includes("location") || msg.includes("address") || msg.includes("directions")) {
+    return this.makeReply(msg, sections["location & directions"]);
+  }
+  if (msg.includes("contact") || msg.includes("phone") || msg.includes("instagram")) {
+    return this.makeReply(msg, sections["contact information"]);
+  }
+  if (msg.includes("special") || msg.includes("offer") || msg.includes("discount") || msg.includes("promotion")) {
+    return this.makeReply(msg, sections["special offers & promotions"]);
+  }
+  if (msg.includes("faq") || msg.includes("question")) {
+    return this.makeReply(msg, sections["frequently asked questions"]);
+  }
+
+  // Default: fuzzy search
+  const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 10);
+  let bestLine = lines[0], bestScore = 0;
+  const words = msg.split(/\s+/);
+
+  for (let line of lines) {
+    let score = 0;
+    for (let w of words) {
+      if (line.toLowerCase().includes(w)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestLine = line;
+    }
+  }
+
+  return this.makeReply(msg, bestLine);
+}
+
+// ✅ Natural replies instead of raw dumps
+async makeReply(userMessage, context) {
+  if (!context) return "Hmm, I couldn’t find that info. Try asking another way.";
+
+  // Always grab a clean sentence instead of whole section
+  let cleanContext = context.split(/[\n]/).filter(l => l.trim().length > 5)[0] || context;
+  cleanContext = cleanContext.replace(/^[-*]+/, "").trim();
+
+  if (this.aiReady) {
+    try {
       const output = await this.generator(
-        `User: "${userMessage}"\nInfo: "${context}"\nReply as a helpful ${this.config.businessType} assistant:`,
-        { max_new_tokens: 60, do_sample: true, temperature: 0.7 }
+        `User: "${userMessage}"\nBusiness info: "${cleanContext}"\nReply as a short, friendly assistant for ${this.config.businessName}:`,
+        { max_new_tokens: 80, do_sample: true, temperature: 0.7 }
       );
-      return output[0].generated_text.split("Reply as a helpful")[1] || output[0].generated_text;
+      let answer = output[0].generated_text;
+      if (answer.includes("assistant:")) {
+        answer = answer.split("assistant:")[1].trim();
+      }
+      return answer;
+    } catch (err) {
+      console.error("AI reply failed, falling back:", err);
     }
-
-    return context;
   }
-}  // ← this was missing!
+
+  // Fallback if AI fails → friendly template
+  return `Here’s what I found: ${cleanContext}`;
+}
 
 
 // ============================
