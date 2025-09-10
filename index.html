@@ -3060,6 +3060,57 @@ class SmartChatbot {
   }
 }
 
+
+
+let bot;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  bot = new SmartChatbot(CHATBOT_CONFIG);
+
+  const chatBtn = document.getElementById("chatbotBtn");
+  const chatWin = document.getElementById("chatWindow");
+  const chatMsgs = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const closeChat = document.getElementById("closeChat");
+
+  function addMessage(sender, text) {
+    const div = document.createElement("div");
+    div.style.margin = "8px 0";
+    div.innerHTML = `<b>${sender}:</b> ${text}`;
+    chatMsgs.appendChild(div);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    addMessage("You", msg);
+    chatInput.value = "";
+
+    addMessage("Bot", "⏳ Thinking...");
+    const answer = await bot.getAnswer(msg);
+    chatMsgs.lastChild.innerHTML = `<b>Bot:</b> ${answer}`;
+  }
+
+  // ✅ Open chat
+  chatBtn.onclick = () => {
+    chatWin.style.display = "flex";
+    if (chatMsgs.innerHTML === "") addMessage("Bot", CHATBOT_CONFIG.greeting);
+  };
+
+  // ✅ Close chat
+  closeChat.onclick = () => {
+    chatWin.style.display = "none";
+  };
+
+  // ✅ Send button + Enter key
+  sendBtn.onclick = sendMessage;
+  chatInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+  });
+});
+
         
   </script>
 </body>
