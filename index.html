@@ -2966,21 +2966,20 @@ ${orderSummary}
 
 
 
+
 const CHATBOT_CONFIG = {
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/export?format=txt",
-
   businessName: "Nails by Rissa Spa",
-  businessType: "spa",
-  greeting:
-    "Hi! I’m your AI assistant for Nails by Rissa Spa. Ask me anything — services, prices, booking, location, hours, and more!"
+  greeting: "Hi! I’m your AI assistant for Nails by Rissa Spa. Ask me anything — services, prices, booking, location, hours, and more!"
 };
 
 class SmartChatbot {
   constructor(config) {
     this.config = config;
-    this.sections = {}; // { sectionName: text }
-    this.aiReady = false;
+    this.sections = [];
+    this.encoder = null;
     this.generator = null;
+    this.aiReady = false;
     this.init();
   }
 
@@ -2994,119 +2993,97 @@ class SmartChatbot {
       const res = await fetch(this.config.docUrl);
       if (!res.ok) throw new Error("Doc fetch failed");
       let text = await res.text();
-
       this.sections = this.splitSections(this.cleanText(text));
-      console.log("✅ Sections loaded:", Object.keys(this.sections));
+      console.log("✅ Sections loaded:", this.sections.map(s => s.title));
     } catch (err) {
       console.error("❌ Couldn’t load Google Doc", err);
-      this.sections = {};
+      this.sections = [];
     }
   }
 
   cleanText(text) {
-    return text
-      .replace(/<[^>]*>/g, " ")
-      .replace(/[\w-]+:[^;"]+;?/g, " ")
-      .replace(/(orphans|widows):\d+;/gi, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/[*•·►]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
+    return text.replace(/\s+/g, " ").trim();
   }
 
   splitSections(text) {
-    const sections = {};
-    const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      const key = match[1].toLowerCase().trim();
-      sections[key] = match[2].trim();
+    const sections = [];
+    const lines = text.split("\n");
+    let current = { title: "general", content: "" };
+
+    for (let line of lines) {
+      if (line.startsWith("##")) {
+        if (current.content.trim()) sections.push(current);
+        current = { title: line.replace(/##+/g, "").trim(), content: "" };
+      } else {
+        current.content += line + " ";
+      }
     }
+    if (current.content.trim()) sections.push(current);
     return sections;
   }
 
   async initAI() {
     try {
       const { pipeline } = window.transformers;
+      this.encoder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
       this.generator = await pipeline("text2text-generation", "Xenova/flan-t5-small");
       this.aiReady = true;
-      console.log("✅ AI model ready");
+
+      // Precompute embeddings for each section
+      for (let s of this.sections) {
+        const out = await this.encoder(s.content);
+        s.embedding = out[0][0]; // sentence embedding
+      }
+      console.log("✅ AI ready with embeddings");
     } catch (err) {
       console.error("❌ AI init failed", err);
       this.aiReady = false;
     }
   }
 
-  async getAnswer(userMessage) {
-    const msg = userMessage.toLowerCase();
-
-    // Routing
-    if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
-      return this.makeReply(userMessage, this.sections["operating hours"]);
+  cosineSim(a, b) {
+    let dot = 0, na = 0, nb = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      na += a[i] * a[i];
+      nb += b[i] * b[i];
     }
-    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("how much")) {
-      return this.makeReply(userMessage, this.sections["services & treatments"]);
-    }
-    if (msg.includes("book") || msg.includes("appointment") || msg.includes("reserve")) {
-      return this.makeReply(userMessage, this.sections["booking information"]);
-    }
-    if (msg.includes("where") || msg.includes("location") || msg.includes("address") || msg.includes("directions")) {
-      return this.makeReply(userMessage, this.sections["location & directions"]);
-    }
-    if (msg.includes("contact") || msg.includes("phone") || msg.includes("instagram")) {
-      return this.makeReply(userMessage, this.sections["contact information"]);
-    }
-    if (msg.includes("special") || msg.includes("offer") || msg.includes("discount") || msg.includes("promotion")) {
-      return this.makeReply(userMessage, this.sections["special offers & promotions"]);
-    }
-    if (msg.includes("faq") || msg.includes("question")) {
-      return this.makeReply(userMessage, this.sections["frequently asked questions"]);
-    }
-
-    // Fallback: just search for best match across all sections
-    let bestMatch = "";
-    let bestScore = 0;
-    const words = msg.split(/\s+/);
-
-    for (let [key, val] of Object.entries(this.sections)) {
-      let score = 0;
-      for (let w of words) {
-        if (val.toLowerCase().includes(w)) score++;
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = val;
-      }
-    }
-
-    if (bestMatch) return this.makeReply(userMessage, bestMatch);
-
-    return "Sorry, I couldn’t find that info. Try asking about hours, prices, booking, or location.";
+    return dot / (Math.sqrt(na) * Math.sqrt(nb));
   }
 
-  async makeReply(userMessage, context) {
-    if (!context) return "Hmm, I couldn’t find that info.";
+  async getAnswer(userMessage) {
+    if (!this.aiReady || !this.sections.length) {
+      return "Sorry, I don’t have info right now.";
+    }
 
-    const cleanContext = context.split(/[\n]/).filter(l => l.trim().length > 5)[0] || context;
+    // Embed question
+    const qEmbed = (await this.encoder(userMessage))[0][0];
 
-    if (this.aiReady) {
-      try {
-        const output = await this.generator(
-          `You are a helpful assistant for ${this.config.businessName} (a ${this.config.businessType}).
-User question: "${userMessage}"
-Business info: "${cleanContext}"
-Answer in one short, friendly sentence:`,
-          { max_new_tokens: 80 }
-        );
-
-        return output[0].generated_text.trim();
-      } catch (err) {
-        console.error("AI reply failed:", err);
+    // Find best matching section
+    let best = this.sections[0];
+    let bestScore = -1;
+    for (let s of this.sections) {
+      const score = this.cosineSim(qEmbed, s.embedding);
+      if (score > bestScore) {
+        best = s;
+        bestScore = score;
       }
     }
 
-    return `Here’s what I found: ${cleanContext}`;
+    // Generate answer
+    try {
+      const out = await this.generator(
+        `You are a helpful assistant for ${this.config.businessName}.
+         Question: "${userMessage}"
+         Context: "${best.content}"
+         Answer in 2-3 friendly sentences.`,
+        { max_new_tokens: 120 }
+      );
+      return out[0].generated_text.trim();
+    } catch (err) {
+      console.error("AI reply failed:", err);
+      return `Here’s what I found: ${best.content.slice(0, 200)}...`;
+    }
   }
 }
 
@@ -3154,7 +3131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   sendBtn.onclick = sendMessage;
-  chatInput.addEventListener("keypress", e => {
+  chatInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendMessage();
   });
 });
