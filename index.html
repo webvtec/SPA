@@ -2968,10 +2968,9 @@ ${orderSummary}
 
 
 const CHATBOT_CONFIG = {
-  // 🔹 REQUIRED: Replace with your Google Docs public URL
-  docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk",
+  // Use the TEXT export, not /edit
+  docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/export?format=txt",
 
-  // 🔹 Business Details (just update these per client/niche)
   businessName: "Nails by Rissa Spa",
   businessType: "spa",
   greeting: "Hi! I’m your AI assistant for Nails by Rissa Spa. Ask me anything — services, prices, booking, location, hours, and more!"
@@ -2992,40 +2991,29 @@ class SmartChatbot {
   }
 
   async loadBusinessData() {
-  try {
-    const res = await fetch(this.config.docUrl);
-    if (!res.ok) throw new Error("Doc fetch failed");
-    let text = await res.text();
-
-    // 🔹 Clean up messy Google Docs formatting
-    this.businessInfo = this.cleanText(text);
-
-    console.log("✅ Business info loaded and cleaned");
-  } catch (err) {
-    console.error("❌ Couldn’t load Google Doc", err);
-    this.businessInfo = "";
+    try {
+      const res = await fetch(this.config.docUrl);
+      if (!res.ok) throw new Error("Doc fetch failed");
+      let text = await res.text();
+      this.businessInfo = this.cleanText(text);
+      console.log("✅ Business info loaded and cleaned");
+    } catch (err) {
+      console.error("❌ Couldn’t load Google Doc", err);
+      this.businessInfo = "";
+    }
   }
-}
 
-cleanText(text) {
-  return text
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, " ")
-    // Remove CSS garbage
-    .replace(/[\w-]+:[^;"]+;?/g, " ")
-    // Remove weird Google Docs spans
-    .replace(/(orphans|widows):\d+;/gi, " ")
-    // Decode HTML entities
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    // Remove extra symbols and whitespace
-    .replace(/[*•·►]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
+  cleanText(text) {
+    return text
+      .replace(/<[^>]*>/g, " ")        // remove HTML
+      .replace(/[\w-]+:[^;"]+;?/g, " ") // remove CSS junk
+      .replace(/(orphans|widows):\d+;/gi, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/[*•·►]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
 
   async initAI() {
     try {
@@ -3043,7 +3031,7 @@ cleanText(text) {
       return "Sorry, I don’t have business info right now.";
     }
 
-    // Step 1: Find relevant part of doc
+    // Match the best doc line
     const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 20);
     let bestLine = lines[0], bestScore = 0;
     const words = userMessage.toLowerCase().split(/\s+/);
@@ -3059,11 +3047,11 @@ cleanText(text) {
       }
     }
 
-    // Step 2: Use AI to rephrase / expand the info
+    // Use AI if possible
     if (this.aiReady && bestLine) {
       const output = await this.generator(
         `The customer asked: "${userMessage}". Based on this info: "${bestLine}", reply naturally as a helpful ${this.config.businessType} assistant.`,
-        { max_new_tokens: 60 }
+        { max_new_tokens: 60, do_sample: true, temperature: 0.7 }
       );
       return output[0].generated_text;
     }
@@ -3071,48 +3059,6 @@ cleanText(text) {
     return bestLine || "Could you rephrase your question?";
   }
 }
-
-// ================================================================
-// EXAMPLE USAGE IN CHATBOT UI
-// ================================================================
-let bot;
-document.addEventListener("DOMContentLoaded", async () => {
-  bot = new SmartChatbot(CHATBOT_CONFIG);
-
-  const chatBtn = document.getElementById("chatbotBtn");
-  const chatWin = document.getElementById("chatWindow");
-  const chatMsgs = document.getElementById("chatMessages");
-  const chatInput = document.getElementById("chatInput");
-  const sendBtn = document.getElementById("sendBtn");
-
-  function addMessage(sender, text) {
-    const div = document.createElement("div");
-    div.innerHTML = `<b>${sender}:</b> ${text}`;
-    chatMsgs.appendChild(div);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const msg = chatInput.value.trim();
-    if (!msg) return;
-    addMessage("You", msg);
-    chatInput.value = "";
-
-    addMessage("Bot", "⏳ Thinking...");
-    const answer = await bot.getAnswer(msg);
-    chatMsgs.lastChild.innerHTML = `<b>Bot:</b> ${answer}`;
-  }
-
-  chatBtn.onclick = () => {
-    chatWin.style.display = "flex";
-    if (chatMsgs.innerHTML === "") addMessage("Bot", CHATBOT_CONFIG.greeting);
-  };
-
-  sendBtn.onclick = sendMessage;
-  chatInput.addEventListener("keypress", e => {
-    if (e.key === "Enter") sendMessage();
-  });
-});
 
         
   </script>
