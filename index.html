@@ -2964,9 +2964,9 @@ ${orderSummary}
 }
 
 
+
     // 🚀 IMPROVED VERSATILE AI CHATBOT WITH BROWSER AI
 // ================================================================
-
 const CHATBOT_CONFIG = {
   // 🔹 REQUIRED: Replace with your Google Docs public URL
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk",
@@ -3124,9 +3124,37 @@ class SmartChatbotWithAI {
       return;
     }
 
-    // Generate AI-enhanced response
-    const response = await this.generateAIResponse(userMessage);
-    this.addMessage("Bot", response);
+    try {
+      // Generate AI-enhanced response
+      const response = await this.generateAIResponse(userMessage);
+      this.addMessage("Bot", response);
+    } catch (error) {
+      console.error("Response generation error:", error);
+      this.addMessage("Bot", "I apologize, let me try that again. What would you like to know about our services?");
+    }
+  }
+
+  // Helper methods for conversation detection
+  isGreeting(msg) {
+    return /(?:^|\s)(hi|hello|hey|good morning|good afternoon|good evening)(?:\s|$)/.test(msg);
+  }
+
+  isThanking(msg) {
+    return /(?:thank|thanks|appreciate)/.test(msg);
+  }
+
+  isGoodbye(msg) {
+    return /(?:bye|goodbye|see you|talk later|have a good)/.test(msg);
+  }
+
+  identifyQueryType(msg) {
+    if (/(?:price|cost|how much|fee|charge|rate|\$|money|expensive|cheap)/.test(msg)) return 'pricing';
+    if (/(?:book|appointment|schedule|reserve|available|when can)/.test(msg)) return 'booking';
+    if (/(?:service|what.*do.*you|offer|available|menu|treatment|massage|nail|facial)/.test(msg)) return 'services';
+    if (/(?:location|where|address|find|directions|how to get)/.test(msg)) return 'location';
+    if (/(?:hours|open|closed|time|when.*open|operating)/.test(msg)) return 'hours';
+    if (/(?:contact|phone|call|reach|number|email)/.test(msg)) return 'contact';
+    return 'general';
   }
 
   // Keep all existing methods (initializeElements, bindEvents, loadBusinessData, etc.)
@@ -3192,7 +3220,6 @@ class SmartChatbotWithAI {
 document.addEventListener('DOMContentLoaded', () => {
   window.smartChatbot = new SmartChatbotWithAI(CHATBOT_CONFIG);
 });
-
     
   </script>
 </body>
