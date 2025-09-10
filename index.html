@@ -2963,7 +2963,10 @@ ${orderSummary}
 }
 
 
-  // 🚀 VERSATILE AI CHATBOT - Copy & Paste for Any Business
+// 🚀 IMPROVED VERSATILE AI CHATBOT - Fixed Response Issues
+// ================================================================
+// CONFIGURATION - CUSTOMIZE FOR EACH BUSINESS
+// ================================================================
 
 const CHATBOT_CONFIG = {
   // 🔹 REQUIRED: Replace with your Google Docs public URL
@@ -2971,29 +2974,21 @@ const CHATBOT_CONFIG = {
   
   // 🔹 Business Details (Customize per niche)
   businessName: "Nails by Rissa Spa", 
-  businessType: "spa", // spa, restaurant, gym, salon, shop, etc.
+  businessType: "spa",
   greeting: "Hi! I'm here to help you with any questions about our spa services. What would you like to know?",
   
-  // 🔹 Fallback responses when no exact match is found
-  fallbackResponses: [
-    "I'd be happy to help! Could you ask about something specific like our services, prices, booking, or location?",
-    "I'm here to help with questions about our {businessType} services. What would you like to know?",
-    "Feel free to ask about our treatments, pricing, location, or how to book!"
-  ],
-
-  // 🔹 Smart keyword categories (automatically adapts to business type)
-  keywords: {
-    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i'],
-    pricing: ['price', 'cost', 'how much', 'fee', 'charge', 'rate', '$', 'money', 'expensive'],
-    services: ['service', 'what do you', 'offer', 'available', 'menu', 'treatment', 'do you have'],
-    location: ['location', 'where', 'address', 'find you', 'directions', 'how to get'],
-    hours: ['hours', 'open', 'closed', 'time', 'when', 'operating'],
-    contact: ['contact', 'phone', 'call', 'reach', 'number', 'email']
+  // 🔹 Quick answers for common questions (fallback when Google Doc fails)
+  quickAnswers: {
+    location: "We're located at Oakland Apartment Complex 114 1/2 116, Constant Spring Rd, Kingston 8, Jamaica, Block F. Click the location button 📍 in our header for directions!",
+    hours: "We're open Monday-Saturday 8:00 AM to 8:00 PM. Closed Sundays.",
+    booking: "You can book through our online booking system on this website for instant confirmation! We also accept walk-ins based on availability.",
+    contact: "Reach us through our booking system here, or follow @nails_byrissa on Instagram for updates!",
+    pricing: "Our services start from $1,500 for basic treatments. Manicures from $3,500, Massages from $8,500, Facials from $7,500. Check our booking section for complete pricing!"
   }
 };
 
 // ================================================================
-// CORE CHATBOT ENGINE - NO NEED TO MODIFY
+// IMPROVED CHATBOT ENGINE WITH BETTER RESPONSE HANDLING
 // ================================================================
 
 class SmartChatbot {
@@ -3002,6 +2997,7 @@ class SmartChatbot {
     this.businessInfo = "";
     this.conversationStarted = false;
     this.context = [];
+    this.isLoading = true;
     this.initializeElements();
     this.loadBusinessData();
   }
@@ -3018,7 +3014,7 @@ class SmartChatbot {
 
   bindEvents() {
     this.chatBtn.onclick = () => this.openChat();
-    this.closeChat.onclick = () => this.closeChat();
+    this.closeChat.onclick = () => this.closeChatWindow();
     this.sendBtn.onclick = () => this.sendMessage();
     this.chatInput.addEventListener("keypress", e => {
       if (e.key === "Enter") this.sendMessage();
@@ -3027,22 +3023,71 @@ class SmartChatbot {
 
   async loadBusinessData() {
     try {
-      // Convert Google Docs edit URL to export URL
-      const exportUrl = this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt');
-      const response = await fetch(exportUrl);
-      const text = await response.text();
-      this.businessInfo = this.cleanDocumentText(text);
-      console.log("✅ Business data loaded successfully");
+      // Try multiple URL formats for Google Docs
+      const urls = [
+        this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt'),
+        this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=plain'),
+        this.config.docUrl + '&export=download&format=txt'
+      ];
+
+      let success = false;
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const text = await response.text();
+            if (text && text.length > 100) {
+              this.businessInfo = this.cleanDocumentText(text);
+              success = true;
+              console.log("✅ Business data loaded successfully");
+              break;
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (!success) {
+        console.log("⚠️ Using fallback business data");
+        this.businessInfo = this.createFallbackData();
+      }
     } catch (error) {
       console.error("❌ Failed to load business data:", error);
-      this.businessInfo = "I'm having trouble accessing our current information. Please contact us directly for the most up-to-date details.";
+      this.businessInfo = this.createFallbackData();
+    } finally {
+      this.isLoading = false;
     }
   }
 
+  createFallbackData() {
+    return `
+    ${this.config.businessName} Services and Information:
+    
+    LOCATION: ${this.config.quickAnswers.location}
+    
+    HOURS: ${this.config.quickAnswers.hours}
+    
+    BOOKING: ${this.config.quickAnswers.booking}
+    
+    PRICING: ${this.config.quickAnswers.pricing}
+    
+    SERVICES: We offer nail services, massages, facials, waxing, and wellness treatments.
+    
+    CONTACT: ${this.config.quickAnswers.contact}
+    `;
+  }
+
   cleanDocumentText(text) {
+    // Remove HTML tags and clean up formatting
     return text
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
       .replace(/\s+/g, ' ')
-      .replace(/[^\w\s$.,!?:;()-]/g, '')
+      .replace(/[^\w\s$.,!?:;()@#-]/g, '')
       .trim();
   }
 
@@ -3066,7 +3111,6 @@ class SmartChatbot {
     this.chatInput.value = "";
     this.context.push(msg);
     
-    // Keep context manageable (last 5 messages)
     if (this.context.length > 5) {
       this.context.shift();
     }
@@ -3082,7 +3126,7 @@ class SmartChatbot {
       margin: 10px 0;
       padding: 12px 15px;
       border-radius: 18px;
-      max-width: 80%;
+      max-width: 85%;
       word-wrap: break-word;
       line-height: 1.4;
       font-size: 14px;
@@ -3105,7 +3149,6 @@ class SmartChatbot {
   }
 
   formatMessage(text) {
-    // Add line breaks and format currency
     return text
       .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$$1</strong>')
       .replace(/\n/g, '<br>')
@@ -3113,7 +3156,7 @@ class SmartChatbot {
   }
 
   generateResponse(userMessage) {
-    if (!this.businessInfo) {
+    if (this.isLoading) {
       this.addMessage("Bot", "I'm still loading our information. Please give me a moment!");
       return;
     }
@@ -3126,150 +3169,181 @@ class SmartChatbot {
   processQuery(normalizedMsg, originalMsg) {
     // Handle conversational elements first
     if (this.isGreeting(normalizedMsg)) {
-      return `Hello! Welcome to ${this.config.businessName}. I'm here to help you with information about our services, prices, booking, and more. What can I help you with?`;
+      return `Hello! Welcome to ${this.config.businessName}. I can help you with our services, prices, booking, location, and hours. What would you like to know?`;
     }
 
     if (this.isThanking(normalizedMsg)) {
-      return "You're very welcome! Is there anything else you'd like to know?";
+      return "You're very welcome! Is there anything else I can help you with?";
     }
 
     if (this.isGoodbye(normalizedMsg)) {
-      return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you!`;
+      return `Thank you for chatting with us! We look forward to welcoming you to ${this.config.businessName}!`;
     }
 
-    // Process specific queries
+    // Identify specific query types and provide targeted responses
     const queryType = this.identifyQueryType(normalizedMsg);
-    const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
-
-    if (relevantInfo && relevantInfo.length > 10) {
-      return this.formatResponse(relevantInfo, queryType);
+    
+    // Use quick answers first, then try to enhance with Google Doc data
+    let response = this.getQuickAnswer(queryType, normalizedMsg);
+    
+    if (!response) {
+      // Try to extract from Google Doc
+      const relevantInfo = this.extractRelevantInfo(originalMsg, queryType);
+      if (relevantInfo && relevantInfo.length > 20) {
+        response = this.formatResponse(relevantInfo, queryType);
+      }
     }
 
-    // Intelligent fallback with context awareness
-    return this.generateSmartFallback(originalMsg, queryType);
+    return response || this.generateSmartFallback(originalMsg, queryType);
   }
 
-  isGreeting(msg) {
-    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'hola'];
-    return greetings.some(greeting => msg.includes(greeting));
-  }
-
-  isThanking(msg) {
-    return msg.includes('thank') || msg.includes('thanks') || msg.includes('appreciate');
-  }
-
-  isGoodbye(msg) {
-    const goodbyes = ['bye', 'goodbye', 'see you', 'talk later', 'thanks again'];
-    return goodbyes.some(goodbye => msg.includes(goodbye));
+  getQuickAnswer(queryType, msg) {
+    switch (queryType) {
+      case 'pricing':
+        if (msg.includes('manicure') || msg.includes('nail')) {
+          return "Our nail services range from $3,500-$7,500. Classic manicure $3,500, gel manicure $4,500, nail art $5,000-$7,500. Check our booking section for complete nail pricing!";
+        }
+        if (msg.includes('massage')) {
+          return "Massage prices start at $8,500 for 60-minute Swedish massage, deep tissue $9,500, couples massage $17,000. We have various options to fit your needs!";
+        }
+        if (msg.includes('facial')) {
+          return "Facial treatments range from $6,000-$9,500. European facial $7,500, anti-aging $9,500, teen facial $6,000. All include professional skincare products!";
+        }
+        return this.config.quickAnswers.pricing;
+        
+      case 'booking':
+        return this.config.quickAnswers.booking;
+        
+      case 'location':
+        return this.config.quickAnswers.location;
+        
+      case 'hours':
+        return this.config.quickAnswers.hours;
+        
+      case 'contact':
+        return this.config.quickAnswers.contact;
+        
+      case 'services':
+        if (msg.includes('massage')) {
+          return "We offer Swedish massage, deep tissue, hot stone, couples massage, prenatal massage, and reflexology. Prices start at $8,500. What type interests you?";
+        }
+        if (msg.includes('nail')) {
+          return "Our nail services include classic & gel manicures, pedicures, nail art, acrylics, and repairs. We specialize in beautiful, long-lasting nail treatments!";
+        }
+        if (msg.includes('facial')) {
+          return "We provide European facials, anti-aging treatments, acne facials, hydrating treatments, and teen facials. All customized for your skin type!";
+        }
+        return "We offer complete spa services: nail care, massage therapy, facials, body waxing, sauna sessions, and wellness packages. What service interests you most?";
+    }
+    return null;
   }
 
   identifyQueryType(msg) {
-    for (const [type, keywords] of Object.entries(this.config.keywords)) {
-      if (keywords.some(keyword => msg.includes(keyword))) {
-        return type;
-      }
-    }
-    
-    // Advanced pattern recognition
-    if (/what.*do.*you.*(?:have|offer|provide)/.test(msg)) return 'services';
-    if (/how.*(?:much|expensive|cost)/.test(msg)) return 'pricing';
-    if (/(?:when|what time).*open/.test(msg)) return 'hours';
-    if (/where.*(?:located|find)/.test(msg)) return 'location';
+    // More precise keyword matching
+    if (/(?:price|cost|how much|fee|charge|rate|\$|money|expensive|cheap)/.test(msg)) return 'pricing';
+    if (/(?:book|appointment|schedule|reserve|available|when can)/.test(msg)) return 'booking';
+    if (/(?:service|what.*do.*you|offer|available|menu|treatment|massage|nail|facial)/.test(msg)) return 'services';
+    if (/(?:location|where|address|find|directions|how to get)/.test(msg)) return 'location';
+    if (/(?:hours|open|closed|time|when.*open|operating)/.test(msg)) return 'hours';
+    if (/(?:contact|phone|call|reach|number|email)/.test(msg)) return 'contact';
     
     return 'general';
   }
 
   extractRelevantInfo(query, queryType) {
+    if (!this.businessInfo || this.businessInfo.length < 50) return null;
+
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    const lines = this.businessInfo.split(/[.!?]+/).filter(line => line.trim().length > 15);
+    const sections = this.businessInfo.split(/(?:\n\s*\n|\.\s+)/).filter(section => section.trim().length > 20);
     
-    let bestMatches = [];
+    let bestMatch = null;
+    let maxScore = 0;
     
-    for (let line of lines) {
-      const lineLower = line.toLowerCase();
+    for (let section of sections) {
+      const sectionLower = section.toLowerCase();
       let score = 0;
       
       // Score based on query words
       queryWords.forEach(word => {
-        if (lineLower.includes(word)) score += 2;
-        if (lineLower.includes(word.substring(0, Math.max(4, word.length - 2)))) score += 1;
+        if (sectionLower.includes(word)) score += 2;
       });
       
-      // Bonus for query type keywords
-      if (queryType && this.config.keywords[queryType]) {
-        this.config.keywords[queryType].forEach(keyword => {
-          if (lineLower.includes(keyword)) score += 3;
-        });
-      }
+      // Bonus for query type relevance
+      const typeBonus = this.getTypeBonus(sectionLower, queryType);
+      score += typeBonus;
       
-      if (score > 0) {
-        bestMatches.push({ text: line.trim(), score });
+      if (score > maxScore && score >= 3) {
+        maxScore = score;
+        bestMatch = section.trim();
       }
     }
     
-    bestMatches.sort((a, b) => b.score - a.score);
+    return bestMatch;
+  }
+
+  getTypeBonus(text, queryType) {
+    const bonusWords = {
+      pricing: ['price', '$', 'cost', 'fee'],
+      booking: ['book', 'appointment', 'schedule'],
+      services: ['service', 'treatment', 'massage', 'facial'],
+      location: ['location', 'address', 'oakland'],
+      hours: ['hours', 'open', 'monday', 'saturday'],
+      contact: ['contact', 'phone', 'instagram']
+    };
     
-    // Return top matches, combined intelligently
-    const topMatches = bestMatches.slice(0, 3);
-    if (topMatches.length === 0) return null;
-    
-    if (topMatches.length === 1) {
-      return topMatches[0].text;
-    }
-    
-    // Combine related information
-    return topMatches
-      .map(match => match.text)
-      .join(' ')
-      .substring(0, 300); // Limit response length
+    const words = bonusWords[queryType] || [];
+    return words.filter(word => text.includes(word)).length * 2;
   }
 
   formatResponse(info, queryType) {
-    let response = info;
+    // Limit response length and add context
+    let response = info.length > 200 ? info.substring(0, 200) + "..." : info;
     
-    // Add contextual closing based on query type
     const contextualEndings = {
-      booking: " You can also use our online booking system for instant confirmation!",
-      pricing: " Contact us for any package deals or special offers!",
+      booking: " Use our online booking system for instant confirmation!",
+      pricing: " Contact us for any special package deals!",
       services: " Would you like to know more about any specific service?",
-      location: " Feel free to reach out if you need detailed directions!",
+      location: " Need directions? Click the location button above!",
       hours: " We look forward to welcoming you during our operating hours!"
     };
     
-    if (contextualEndings[queryType] && response.length < 200) {
+    if (contextualEndings[queryType] && response.length < 150) {
       response += contextualEndings[queryType];
     }
     
     return response;
   }
 
+  isGreeting(msg) {
+    return /(?:^|\s)(hi|hello|hey|good morning|good afternoon|good evening)(?:\s|$)/.test(msg);
+  }
+
+  isThanking(msg) {
+    return /(?:thank|thanks|appreciate)/.test(msg);
+  }
+
+  isGoodbye(msg) {
+    return /(?:bye|goodbye|see you|talk later|have a good)/.test(msg);
+  }
+
   generateSmartFallback(originalMsg, queryType) {
-    const fallbacks = this.config.fallbackResponses;
-    let response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-    
-    // Customize fallback based on query type
     const suggestions = {
-      general: "Try asking about our services, pricing, location, or booking information!",
-      services: "Ask me about specific treatments or services you're interested in!",
-      pricing: "Feel free to ask about costs for specific services!",
-      booking: "I can help you with appointment and scheduling information!",
-      location: "Need directions or information about our location?",
+      general: "I can help you with our services, pricing, booking, location, or hours. What would you like to know?",
+      services: "Ask me about our nail services, massages, facials, or other spa treatments!",
+      pricing: "I can tell you about prices for specific services like nails, massages, or facials!",
+      booking: "I can help with booking information and appointment details!",
+      location: "Need our address or directions? I can help with that!",
       hours: "Want to know when we're open? Just ask!"
     };
     
-    if (suggestions[queryType]) {
-      response += " " + suggestions[queryType];
-    }
-    
-    // Replace placeholders
-    response = response.replace('{businessType}', this.config.businessType);
-    response = response.replace('{businessName}', this.config.businessName);
-    
-    return response;
+    return suggestions[queryType] || suggestions.general;
   }
 }
-    
-// Initialize the chatbot when DOM is ready
+
+// ================================================================
+// INITIALIZE CHATBOT
+// ================================================================
+
 document.addEventListener('DOMContentLoaded', () => {
   window.smartChatbot = new SmartChatbot(CHATBOT_CONFIG);
 });
