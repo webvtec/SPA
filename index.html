@@ -2965,8 +2965,6 @@ ${orderSummary}
 }
 
 
-
-
 const CHATBOT_CONFIG = {
   // Use the TEXT export, not /edit
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/export?format=txt",
@@ -3027,68 +3025,73 @@ class SmartChatbot {
   }
 
   async getAnswer(userMessage) {
-  if (!this.businessInfo) {
-    return "Sorry, I don’t have business info right now.";
-  }
-
-  // ✅ Break info into sections by headers
-  const sections = {};
-  const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
-  let match;
-  while ((match = regex.exec(this.businessInfo)) !== null) {
-    sections[match[1].toLowerCase()] = match[2].trim();
-  }
-
-  const msg = userMessage.toLowerCase();
-
-  // ✅ Keyword routing
-  if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
-    return this.makeReply(msg, sections["hours"] || sections["location"]);
-  }
-  if (msg.includes("price") || msg.includes("cost") || msg.includes("fee")) {
-    return this.makeReply(msg, sections["prices"]);
-  }
-  if (msg.includes("book") || msg.includes("appointment")) {
-    return this.makeReply(msg, sections["booking"]);
-  }
-  if (msg.includes("where") || msg.includes("location") || msg.includes("address")) {
-    return this.makeReply(msg, sections["location"]);
-  }
-
-  // Default: best fuzzy match
-  const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 10);
-  let bestLine = lines[0], bestScore = 0;
-  const words = msg.split(/\s+/);
-
-  for (let line of lines) {
-    let score = 0;
-    for (let w of words) {
-      if (line.toLowerCase().includes(w)) score++;
+    if (!this.businessInfo) {
+      return "Sorry, I don’t have business info right now.";
     }
-    if (score > bestScore) {
-      bestScore = score;
-      bestLine = line;
+
+    // ✅ Break info into sections by headers
+    const sections = {};
+    const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
+    let match;
+    while ((match = regex.exec(this.businessInfo)) !== null) {
+      sections[match[1].toLowerCase()] = match[2].trim();
     }
+
+    const msg = userMessage.toLowerCase();
+
+    // ✅ Keyword routing
+    if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
+      return this.makeReply(msg, sections["hours"] || sections["location"]);
+    }
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee")) {
+      return this.makeReply(msg, sections["prices"]);
+    }
+    if (msg.includes("book") || msg.includes("appointment")) {
+      return this.makeReply(msg, sections["booking"]);
+    }
+    if (msg.includes("where") || msg.includes("location") || msg.includes("address")) {
+      return this.makeReply(msg, sections["location"]);
+    }
+
+    // Default: best fuzzy match
+    const lines = this.businessInfo.split(/[\n\.]/).filter(l => l.trim().length > 10);
+    let bestLine = lines[0], bestScore = 0;
+    const words = msg.split(/\s+/);
+
+    for (let line of lines) {
+      let score = 0;
+      for (let w of words) {
+        if (line.toLowerCase().includes(w)) score++;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestLine = line;
+      }
+    }
+
+    return this.makeReply(msg, bestLine);
   }
 
-  return this.makeReply(msg, bestLine);
-}
+  // ✅ Natural language polish
+  async makeReply(userMessage, context) {
+    if (!context) return "Hmm, I couldn’t find that info. Try asking another way.";
 
-// ✅ Natural language polish
-async makeReply(userMessage, context) {
-  if (!context) return "Hmm, I couldn’t find that info. Try asking another way.";
+    if (this.aiReady) {
+      const output = await this.generator(
+        `User: "${userMessage}"\nInfo: "${context}"\nReply as a helpful ${this.config.businessType} assistant:`,
+        { max_new_tokens: 60, do_sample: true, temperature: 0.7 }
+      );
+      return output[0].generated_text.split("Reply as a helpful")[1] || output[0].generated_text;
+    }
 
-  if (this.aiReady) {
-    const output = await this.generator(
-      `User: "${userMessage}"\nInfo: "${context}"\nReply as a helpful ${this.config.businessType} assistant:`,
-      { max_new_tokens: 60, do_sample: true, temperature: 0.7 }
-    );
-    return output[0].generated_text.split("Reply as a helpful")[1] || output[0].generated_text;
+    return context;
   }
+}  // ← this was missing!
 
-  return context;
-}
 
+// ============================
+// Frontend hookup
+// ============================
 
 let bot;
 
@@ -3139,7 +3142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-        
+
   </script>
 </body>
 </html>
