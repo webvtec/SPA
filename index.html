@@ -2967,7 +2967,6 @@ ${orderSummary}
 
 
 const CHATBOT_CONFIG = {
-  // TEXT-export link of your Google Doc
   docUrl: "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/export?format=txt",
 
   businessName: "Nails by Rissa Spa",
@@ -2979,39 +2978,28 @@ const CHATBOT_CONFIG = {
 class SmartChatbot {
   constructor(config) {
     this.config = config;
-    this.rawText = "";
-    this.sentences = []; // { text, cleaned, embedding }
+    this.sections = {}; // { sectionName: text }
     this.aiReady = false;
-    this.embedReady = false;
     this.generator = null;
-    this.embedder = null;
-    this.minScoreThreshold = 0.55; // semantic similarity threshold (tweakable)
     this.init();
   }
 
   async init() {
     await this.loadBusinessData();
-    await this.initModels();
-    if (this.embedReady && this.sentences.length) {
-      await this.buildEmbeddings();
-    }
+    await this.initAI();
   }
 
-  /* -------------------------
-     Google Doc loading + cleaning
-     ------------------------- */
   async loadBusinessData() {
     try {
       const res = await fetch(this.config.docUrl);
-      if (!res.ok) throw new Error(`Doc fetch failed: ${res.status}`);
+      if (!res.ok) throw new Error("Doc fetch failed");
       let text = await res.text();
-      this.rawText = text;
-      this.cleanAndSplit(text);
-      console.log("✅ Business info loaded and split into", this.sentences.length, "sentences");
+
+      this.sections = this.splitSections(this.cleanText(text));
+      console.log("✅ Sections loaded:", Object.keys(this.sections));
     } catch (err) {
-      console.error("❌ Couldn't load Google Doc:", err);
-      this.rawText = "";
-      this.sentences = [];
+      console.error("❌ Couldn’t load Google Doc", err);
+      this.sections = {};
     }
   }
 
@@ -3027,310 +3015,104 @@ class SmartChatbot {
       .trim();
   }
 
-  cleanAndSplit(text) {
-    const cleaned = this.cleanText(text);
-    // Prefer splitting on headings and sentences. Keep reasonable length chunks.
-    // First split by headings (lines starting with ## or uppercase headings)
-    // Then split remainder into sentences.
-    const lines = cleaned.split(/\n+/).map(l => l.trim()).filter(Boolean);
-    const pieces = [];
-
-    for (let line of lines) {
-      // Keep headings connected to following lines if short
-      if (/^#{1,6}\s/.test(line)) {
-        pieces.push(line.replace(/^#+\s*/, "").trim());
-      } else {
-        // break long lines into sentences
-        const s = line.split(/(?<=[.?!])\s+/).map(x => x.trim()).filter(Boolean);
-        for (let seg of s) {
-          if (seg.length > 8) pieces.push(seg);
-        }
-      }
+  splitSections(text) {
+    const sections = {};
+    const regex = /##\s*(.+?)\n([\s\S]*?)(?=##|$)/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const key = match[1].toLowerCase().trim();
+      sections[key] = match[2].trim();
     }
-
-    // Build sentence objects
-    this.sentences = pieces.map(p => ({ text: p, cleaned: p.replace(/^[-*]+\s*/, "").trim(), embedding: null }));
+    return sections;
   }
 
-  /* -------------------------
-     Transformers model initialization
-     ------------------------- */
-  async initModels() {
+  async initAI() {
     try {
-      // Load embedder (feature-extraction) and generator (text2text)
-      // NOTE: If loading remote models fails or is too slow, the code will catch and continue with fallbacks.
-      if (!window.transformers) throw new Error("transformers.js (Xenova) not found on window.transformers");
       const { pipeline } = window.transformers;
-
-      console.log("⏳ Loading embedder model (MiniLM)...");
-      try {
-        this.embedder = await pipeline("feature-extraction", "Xenova/sentence-transformers/all-MiniLM-L6-v2");
-        this.embedReady = true;
-        console.log("✅ Embedder ready");
-      } catch (err) {
-        console.warn("⚠️ Embedder load failed:", err);
-        this.embedder = null;
-        this.embedReady = false;
-      }
-
-      console.log("⏳ Loading generator model (Flan-T5 small)...");
-      try {
-        // Use text2text-generation for instruction-style responses
-        this.generator = await pipeline("text2text-generation", "Xenova/flan-t5-small");
-        this.aiReady = true;
-        console.log("✅ Generator ready");
-      } catch (err) {
-        console.warn("⚠️ Generator load failed, attempts to continue with simpler templating:", err);
-        this.generator = null;
-        this.aiReady = false;
-      }
+      this.generator = await pipeline("text2text-generation", "Xenova/flan-t5-small");
+      this.aiReady = true;
+      console.log("✅ AI model ready");
     } catch (err) {
-      console.error("❌ initModels failed:", err);
-      this.embedder = null;
-      this.generator = null;
-      this.embedReady = false;
+      console.error("❌ AI init failed", err);
       this.aiReady = false;
     }
   }
 
-  /* -------------------------
-     Build semantic embeddings for doc sentences
-     ------------------------- */
-  async buildEmbeddings() {
-    if (!this.embedder) {
-      console.warn("No embedder available; skipping embedding build.");
-      return;
-    }
-    try {
-      // Batch feature extraction to avoid too many calls; do in manageable chunks
-      const texts = this.sentences.map(s => s.cleaned);
-      const batchSize = 16;
-      for (let i = 0; i < texts.length; i += batchSize) {
-        const batch = texts.slice(i, i + batchSize);
-        // feature-extraction may return arrays or tensors; assume array-of-arrays
-        const out = await this.embedder(batch);
-        // out can be [ [dim vector], [dim vector], ... ]
-        for (let j = 0; j < out.length; j++) {
-          const v = Array.isArray(out[j][0]) ? out[j][0] : out[j]; // handle nested possibilities
-          this.sentences[i + j].embedding = this.normalizeVector(v);
-        }
-      }
-      console.log("✅ Built embeddings for doc sentences");
-    } catch (err) {
-      console.error("❌ buildEmbeddings failed:", err);
-    }
-  }
-
-  normalizeVector(v) {
-    const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0)) || 1e-9;
-    return v.map(x => x / norm);
-  }
-
-  cosineSim(a, b) {
-    // assume normalized
-    let s = 0;
-    const L = Math.min(a.length, b.length);
-    for (let i = 0; i < L; i++) s += a[i] * b[i];
-    return s;
-  }
-
-  /* -------------------------
-     Semantic search over the Google Doc
-     ------------------------- */
-  async semanticSearch(query, topK = 3) {
-    // If no embeddings, fallback to keyword fuzzy
-    if (!this.embedReady || !this.sentences.length) {
-      // fallback: quick keyword match
-      const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-      const scored = this.sentences.map(s => {
-        let score = 0;
-        for (let w of words) if (s.cleaned.toLowerCase().includes(w)) score++;
-        return { s, score };
-      }).sort((a,b) => b.score - a.score);
-      return scored.slice(0, topK).map(x => ({ score: x.score > 0 ? 0.5 : 0, text: x.s.cleaned }));
-    }
-
-    try {
-      const qEmbedRaw = await this.embedder([query]);
-      const qVec = Array.isArray(qEmbedRaw[0][0]) ? qEmbedRaw[0][0] : qEmbedRaw[0];
-      const qNorm = this.normalizeVector(qVec);
-
-      const scored = [];
-      for (let s of this.sentences) {
-        if (!s.embedding) continue;
-        const sim = this.cosineSim(qNorm, s.embedding);
-        scored.push({ sim, text: s.cleaned });
-      }
-      scored.sort((a,b) => b.sim - a.sim);
-      return scored.slice(0, topK).map(x => ({ score: x.sim, text: x.text }));
-    } catch (err) {
-      console.warn("semanticSearch failed, falling back:", err);
-      return [];
-    }
-  }
-
-  /* -------------------------
-     Free web search fallback (DuckDuckGo HTML)
-     - NOTE: duckduckgo.com/html/ is a light HTML interface and often works without keys,
-       but CORS or anti-scrape measures may block it when called from browsers.
-     - If blocked, you'll need a tiny server-side proxy or a CORS-enabled endpoint.
-     ------------------------- */
-  async webSearch(query) {
-    try {
-      const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { method: "GET" }); // may be blocked by CORS
-      if (!res.ok) throw new Error("search fetch failed: " + res.status);
-      const html = await res.text();
-
-      // crude extraction: find links/titles in ddg result__a anchors, or fallback to <a>
-      const titles = [];
-      // Try result__a first
-      let match;
-      const re = /<a[^>]*class="result__a"[^>]*>(.*?)<\/a>/g;
-      while ((match = re.exec(html)) && titles.length < 6) {
-        const stripped = match[1].replace(/<[^>]+>/g, "").trim();
-        if (stripped) titles.push(stripped);
-      }
-      // fallback: common anchor pattern
-      if (!titles.length) {
-        const re2 = /<a[^>]*href="[^"]+"[^>]*>([^<]{20,200}?)<\/a>/g;
-        while ((match = re2.exec(html)) && titles.length < 6) {
-          const stripped = match[1].replace(/<[^>]+>/g, "").trim();
-          if (stripped.length > 20) titles.push(stripped);
-        }
-      }
-
-      if (!titles.length) return "";
-      return titles.slice(0, 3).join(" • ");
-    } catch (err) {
-      console.warn("webSearch failed:", err);
-      return "";
-    }
-  }
-
-  /* -------------------------
-     High-level getAnswer
-     ------------------------- */
   async getAnswer(userMessage) {
-    const msg = (userMessage || "").trim();
-    if (!msg) return "Please type a question.";
+    const msg = userMessage.toLowerCase();
 
-    // If we don't have doc data loaded at all, attempt to web search immediately
-    if (!this.rawText) {
-      const web = await this.webSearch(msg);
-      if (web) return await this.makeReply(msg, web, true);
-      return "Sorry — I couldn't load business info and couldn't reach the web search.";
+    // Routing
+    if (msg.includes("time") || msg.includes("hour") || msg.includes("open") || msg.includes("close")) {
+      return this.makeReply(userMessage, this.sections["operating hours"]);
+    }
+    if (msg.includes("price") || msg.includes("cost") || msg.includes("fee") || msg.includes("how much")) {
+      return this.makeReply(userMessage, this.sections["services & treatments"]);
+    }
+    if (msg.includes("book") || msg.includes("appointment") || msg.includes("reserve")) {
+      return this.makeReply(userMessage, this.sections["booking information"]);
+    }
+    if (msg.includes("where") || msg.includes("location") || msg.includes("address") || msg.includes("directions")) {
+      return this.makeReply(userMessage, this.sections["location & directions"]);
+    }
+    if (msg.includes("contact") || msg.includes("phone") || msg.includes("instagram")) {
+      return this.makeReply(userMessage, this.sections["contact information"]);
+    }
+    if (msg.includes("special") || msg.includes("offer") || msg.includes("discount") || msg.includes("promotion")) {
+      return this.makeReply(userMessage, this.sections["special offers & promotions"]);
+    }
+    if (msg.includes("faq") || msg.includes("question")) {
+      return this.makeReply(userMessage, this.sections["frequently asked questions"]);
     }
 
-    // 1) Quick keyword routing to common sections (fast, deterministic)
-    const low = msg.toLowerCase();
-    const routing = [
-      { keys: ["time", "hour", "open", "close"], label: "operating hours" },
-      { keys: ["price", "cost", "fee", "how much"], label: "services & treatments" },
-      { keys: ["book", "appointment", "reserve"], label: "booking information" },
-      { keys: ["where", "location", "address", "directions"], label: "location & directions" },
-      { keys: ["contact", "phone", "instagram", "email"], label: "contact information" },
-      { keys: ["special", "offer", "discount", "promotion"], label: "special offers & promotions" },
-      { keys: ["faq", "question", "help"], label: "frequently asked questions" }
-    ];
+    // Fallback: just search for best match across all sections
+    let bestMatch = "";
+    let bestScore = 0;
+    const words = msg.split(/\s+/);
 
-    for (let rule of routing) {
-      if (rule.keys.some(k => low.includes(k))) {
-        // find best sentence in the doc that contains the rule.label phrase (case-insensitive)
-        const found = this.sentences.find(s => s.cleaned.toLowerCase().includes(rule.label));
-        if (found) return await this.makeReply(msg, found.cleaned);
-        // otherwise try semantic search restricted to sentences containing any of the keys
-        const candidates = this.sentences.filter(s => rule.keys.some(k => s.cleaned.toLowerCase().includes(k)));
-        if (candidates.length) return await this.makeReply(msg, candidates[0].cleaned);
-        // continue — maybe semantic search will find something
+    for (let [key, val] of Object.entries(this.sections)) {
+      let score = 0;
+      for (let w of words) {
+        if (val.toLowerCase().includes(w)) score++;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = val;
       }
     }
 
-    // 2) Semantic search across doc
-    let sem = [];
-    try {
-      sem = await this.semanticSearch(msg, 4);
-    } catch (err) {
-      console.warn("semantic search error:", err);
-    }
+    if (bestMatch) return this.makeReply(userMessage, bestMatch);
 
-    if (sem && sem.length && sem[0].score !== undefined && sem[0].score >= this.minScoreThreshold) {
-      // Return succinct answer based on top doc result
-      return await this.makeReply(msg, sem[0].text);
-    }
-
-    // 3) If doc didn't help, try web search fallback
-    const webResults = await this.webSearch(msg);
-    if (webResults) {
-      return await this.makeReply(msg, webResults, true);
-    }
-
-    // 4) Last resort: return the best doc sentence even if below threshold (avoid empty)
-    if (sem && sem.length && sem[0].text) {
-      return await this.makeReply(msg, sem[0].text);
-    }
-
-    return "Hmm, I couldn't find an answer. Try rephrasing or ask about business hours, services, or booking.";
+    return "Sorry, I couldn’t find that info. Try asking about hours, prices, booking, or location.";
   }
 
-  /* -------------------------
-     Use generator model to craft short, friendly replies.
-     If generator not available, use simple templates.
-     If `isWeb` true, context likely contains web search snippets.
-     ------------------------- */
-  async makeReply(userMessage, contextText, isWeb = false) {
-    if (!contextText) return "Hmm, I couldn't find that info. Try asking another way.";
+  async makeReply(userMessage, context) {
+    if (!context) return "Hmm, I couldn’t find that info.";
 
-    // Keep only one short chunk of the context for clarity
-    const cleanContext = contextText.split(/[\n.]{1,2}/).find(s => s && s.trim().length > 10) || contextText;
+    const cleanContext = context.split(/[\n]/).filter(l => l.trim().length > 5)[0] || context;
 
-    // If the generator model is available, use it
-    if (this.aiReady && this.generator) {
+    if (this.aiReady) {
       try {
-        // Flan-T5 expects instruction-style text2text: give task, context & question
-        const prompt = `You are a short, friendly assistant for ${this.config.businessName} (a ${this.config.businessType}).
-Instruction: Answer the user's question directly and concisely using ONLY the provided context when possible. If the context is about general web facts, summarize briefly.
-
-Context: "${cleanContext}"
-
+        const output = await this.generator(
+          `You are a helpful assistant for ${this.config.businessName} (a ${this.config.businessType}).
 User question: "${userMessage}"
+Business info: "${cleanContext}"
+Answer in one short, friendly sentence:`,
+          { max_new_tokens: 80 }
+        );
 
-Answer (one short friendly paragraph):`;
-        const out = await this.generator(prompt, { max_new_tokens: 120 });
-        // out can be an array or object depending on pipeline; read safe
-        let generated = "";
-        if (Array.isArray(out) && out.length) {
-          generated = out[0].generated_text || out[0].text || out[0].summary || "";
-        } else if (out && typeof out === "object") {
-          generated = out.generated_text || out.text || "";
-        } else {
-          generated = String(out || "");
-        }
-        generated = (generated || "").trim();
-        // Sometimes the model may just echo the prompt; fallback to template if output seems too similar or empty
-        if (!generated || generated.length < 8) {
-          throw new Error("empty model output");
-        }
-        // Keep answers short — remove newlines
-        return generated.replace(/\n+/g, " ").trim();
+        return output[0].generated_text.trim();
       } catch (err) {
-        console.warn("AI generator failed or returned nothing, fallback to template:", err);
+        console.error("AI reply failed:", err);
       }
     }
 
-    // Fallback simple templating:
-    if (isWeb) {
-      return `Here's what I found online: ${cleanContext}`;
-    } else {
-      return `Here's what I found: ${cleanContext}`;
-    }
+    return `Here’s what I found: ${cleanContext}`;
   }
 }
 
-/* ============================
-   Frontend hookup (same style as your previous code)
-   ============================ */
-
+// ============================
+// Frontend hookup
+// ============================
 let bot;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -3358,32 +3140,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     chatInput.value = "";
 
     addMessage("Bot", "⏳ Thinking...");
-    try {
-      const answer = await bot.getAnswer(msg);
-      chatMsgs.lastChild.innerHTML = `<b>Bot:</b> ${answer}`;
-    } catch (err) {
-      chatMsgs.lastChild.innerHTML = `<b>Bot:</b> Sorry — something went wrong.`;
-      console.error("sendMessage error:", err);
-    }
+    const answer = await bot.getAnswer(msg);
+    chatMsgs.lastChild.innerHTML = `<b>Bot:</b> ${answer}`;
   }
 
-  // Open chat
   chatBtn.onclick = () => {
     chatWin.style.display = "flex";
     if (chatMsgs.innerHTML === "") addMessage("Bot", CHATBOT_CONFIG.greeting);
   };
 
-  // Close chat
   closeChat.onclick = () => {
     chatWin.style.display = "none";
   };
 
-  // Send button + Enter key
   sendBtn.onclick = sendMessage;
   chatInput.addEventListener("keypress", e => {
     if (e.key === "Enter") sendMessage();
   });
 });
+
 
 
   </script>
