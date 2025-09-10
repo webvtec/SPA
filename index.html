@@ -2257,20 +2257,42 @@ function generateChatResponse(message) {
   }
   
   // Services and prices
-  if (normalized.includes('service') || normalized.includes('price') || normalized.includes('cost') || normalized.includes('nail') || normalized.includes('manicure') || normalized.includes('pedicure') || normalized.includes('acrylic')) {
-    let serviceText = `Here are our main services:\n\n`;
-    
-    Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
-      serviceText += `**${category}:**\n`;
-      services.slice(0, 3).forEach(service => { // Show first 3 of each category
-        serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
-      });
-      serviceText += `\n`;
-    });
-    
-    serviceText += `*Prices may vary based on complexity and are subject to change. Contact us for exact quotes! 💎`;
-    return serviceText;
+if (normalized.includes('service') || normalized.includes('price') || normalized.includes('cost') || normalized.includes('nail') || normalized.includes('manicure') || normalized.includes('pedicure') || normalized.includes('acrylic')) {
+  // Check if asking about a specific service price
+  const serviceMatches = [];
+  Object.values(CHATBOT_CONFIG.services).flat().forEach(service => {
+    const serviceName = service.name.toLowerCase().replace(/[^a-z\s]/g, '');
+    if (normalized.includes(serviceName) || 
+        serviceName.split(' ').some(word => normalized.includes(word) && word.length > 3)) {
+      serviceMatches.push(service);
+    }
+  });
+  
+  if (serviceMatches.length > 0 && (normalized.includes('price') || normalized.includes('cost'))) {
+    const service = serviceMatches[0];
+    return `${service.name} starts at ${service.price}. *Prices may vary based on complexity and are subject to change.`;
   }
+  
+  // If asking about specific service duration
+  if (serviceMatches.length > 0 && (normalized.includes('how long') || normalized.includes('duration'))) {
+    const service = serviceMatches[0];
+    return `${service.name} takes approximately ${service.duration}.`;
+  }
+  
+  // General services list if no specific service found
+  let serviceText = `Here are our main services:\n\n`;
+  
+  Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
+    serviceText += `**${category}:**\n`;
+    services.slice(0, 3).forEach(service => {
+      serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
+    });
+    serviceText += `\n`;
+  });
+  
+  serviceText += `*Prices may vary based on complexity and are subject to change. Contact us for exact quotes! 💎`;
+  return serviceText;
+}
   
   // Social media
   if (normalized.includes('instagram') || normalized.includes('insta') || normalized.includes('tiktok') || normalized.includes('social')) {
