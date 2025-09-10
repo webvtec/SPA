@@ -1151,7 +1151,27 @@
 </div>
 </div>
 
+    <!-- Chatbot Button -->
+<div id="chatbotBtn" 
+     style="position:fixed;bottom:20px;right:20px;background:#E58BBE;color:white;
+            padding:15px;border-radius:50%;cursor:pointer;font-size:22px;z-index:9999;">
+💬
+</div>
 
+<!-- Chat Window -->
+<div id="chatWindow" 
+     style="display:none;position:fixed;bottom:80px;right:20px;width:300px;height:400px;
+            background:white;border:1px solid #ccc;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.2);
+            display:flex;flex-direction:column;z-index:9999;">
+  <div style="background:#E58BBE;color:white;padding:10px;text-align:center;font-weight:bold;">
+    Chat with Us
+  </div>
+  <div id="chatMessages" style="flex:1;padding:10px;overflow-y:auto;font-size:14px;"></div>
+  <input id="chatInput" type="text" placeholder="Ask me anything..." 
+         style="border:none;border-top:1px solid #ddd;padding:10px;width:100%;box-sizing:border-box;"/>
+</div>
+
+    
 <!-- ✅ Scripts -->
 <script>
     let currentUser = null;
@@ -2926,6 +2946,64 @@ ${orderSummary}
     knutsfordSelect.value = ""; // clear hidden select
   }
 }
+
+
+  const chatBtn = document.getElementById("chatbotBtn");
+  const chatWin = document.getElementById("chatWindow");
+  const chatMsgs = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+
+  let businessInfo = "";
+
+  // 🔹 Replace this with your Google Docs PUBLIC link (set to "Anyone with link → Viewer")
+  const docUrl = "https://docs.google.com/document/d/your-doc-id-here/export?format=txt";
+
+  // Load Google Doc content
+  fetch(docUrl)
+    .then(res => res.text())
+    .then(text => {
+      businessInfo = text;
+    })
+    .catch(err => {
+      console.error("Failed to load Google Doc:", err);
+      businessInfo = "Sorry, business info is not available.";
+    });
+
+  chatBtn.onclick = () => {
+    chatWin.style.display = (chatWin.style.display === "none" ? "flex" : "none");
+  };
+
+  chatInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter" && chatInput.value.trim() !== "") {
+      const msg = chatInput.value.trim();
+      addMessage("You", msg);
+      chatInput.value = "";
+      respond(msg);
+    }
+  });
+
+  function addMessage(sender, text) {
+    chatMsgs.innerHTML += `<div><b>${sender}:</b> ${text}</div>`;
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function respond(question) {
+    if (!businessInfo) {
+      addMessage("Bot", "Sorry, I don’t have any info yet.");
+      return;
+    }
+
+    // Simple keyword matching
+    const lines = businessInfo.split("\n");
+    let bestMatch = lines.find(line => line.toLowerCase().includes(question.toLowerCase()));
+
+    if (!bestMatch) {
+      bestMatch = "Sorry, I couldn't find an answer. Please call us directly.";
+    }
+
+    addMessage("Bot", bestMatch);
+  }
+
 
     
   </script>
