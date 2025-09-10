@@ -1151,25 +1151,40 @@
 </div>
 </div>
 
-    <!-- Chatbot Button -->
+    <!-- Floating Chat Button -->
 <div id="chatbotBtn" 
      style="position:fixed;bottom:20px;right:20px;background:#E58BBE;color:white;
             padding:15px;border-radius:50%;cursor:pointer;font-size:22px;z-index:9999;">
-💬
+  💬
 </div>
 
-<!-- Chat Window -->
+<!-- Chat Modal -->
 <div id="chatWindow" 
-     style="display:none;position:fixed;bottom:80px;right:20px;width:300px;height:400px;
-            background:white;border:1px solid #ccc;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.2);
-            display:flex;flex-direction:column;z-index:9999;">
-  <div style="background:#E58BBE;color:white;padding:10px;text-align:center;font-weight:bold;">
-    Chat with Us
+     style="display:none;position:fixed;bottom:80px;right:20px;width:320px;height:420px;
+            background:white;border:1px solid #ccc;border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.2);flex-direction:column;z-index:10000;">
+  
+  <!-- Header -->
+  <div style="background:#E58BBE;color:white;padding:10px;display:flex;
+              justify-content:space-between;align-items:center;border-radius:12px 12px 0 0;">
+    <span style="font-weight:bold;">Chat with us</span>
+    <span id="closeChat" style="cursor:pointer;font-size:18px;">✖</span>
   </div>
-  <div id="chatMessages" style="flex:1;padding:10px;overflow-y:auto;font-size:14px;"></div>
-  <input id="chatInput" type="text" placeholder="Ask me anything..." 
-         style="border:none;border-top:1px solid #ddd;padding:10px;width:100%;box-sizing:border-box;"/>
+  
+  <!-- Messages -->
+  <div id="chatMessages" style="flex:1;padding:10px;overflow-y:auto;font-size:14px;">
+    <div style="text-align:center;color:#999;font-size:12px;">Ask me anything about our services 💅</div>
+  </div>
+  
+  <!-- Input + Send -->
+  <div style="display:flex;border-top:1px solid #ddd;">
+    <input id="chatInput" type="text" placeholder="Type your message..."
+           style="flex:1;border:none;padding:10px;font-size:14px;outline:none;"/>
+    <button id="sendBtn" style="background:#E58BBE;color:white;border:none;
+                                padding:0 15px;cursor:pointer;font-weight:bold;">Send</button>
+  </div>
 </div>
+
 
     
 <!-- ✅ Scripts -->
@@ -2950,60 +2965,67 @@ ${orderSummary}
 
   const chatBtn = document.getElementById("chatbotBtn");
   const chatWin = document.getElementById("chatWindow");
+  const closeChat = document.getElementById("closeChat");
   const chatMsgs = document.getElementById("chatMessages");
   const chatInput = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("sendBtn");
 
   let businessInfo = "";
 
-  // 🔹 Replace this with your Google Docs PUBLIC link (set to "Anyone with link → Viewer")
+  // 🔹 Replace with your PUBLIC Google Docs link (set to Anyone with link → Viewer)
   const docUrl = "https://docs.google.com/document/d/1aj7yEn1ycfkkW-5W9p-d-T4yMk-XUK0I5wUhFXDRmPU/edit?usp=drivesdk";
 
   // Load Google Doc content
   fetch(docUrl)
     .then(res => res.text())
-    .then(text => {
-      businessInfo = text;
-    })
+    .then(text => businessInfo = text)
     .catch(err => {
       console.error("Failed to load Google Doc:", err);
-      businessInfo = "Sorry, business info is not available.";
+      businessInfo = "Sorry, business info not available.";
     });
 
+  // Toggle chat open/close
   chatBtn.onclick = () => {
-    chatWin.style.display = (chatWin.style.display === "none" ? "flex" : "none");
+    chatWin.style.display = "flex";
+  };
+  closeChat.onclick = () => {
+    chatWin.style.display = "none";
   };
 
-  chatInput.addEventListener("keypress", function(e) {
-    if (e.key === "Enter" && chatInput.value.trim() !== "") {
-      const msg = chatInput.value.trim();
-      addMessage("You", msg);
-      chatInput.value = "";
-      respond(msg);
-    }
+  // Handle sending
+  function sendMessage() {
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+    addMessage("You", msg);
+    chatInput.value = "";
+    respond(msg);
+  }
+
+  sendBtn.onclick = sendMessage;
+  chatInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
   });
 
+  // Display messages
   function addMessage(sender, text) {
-    chatMsgs.innerHTML += `<div><b>${sender}:</b> ${text}</div>`;
+    const bubble = document.createElement("div");
+    bubble.style.margin = "5px 0";
+    bubble.innerHTML = `<b>${sender}:</b> ${text}`;
+    chatMsgs.appendChild(bubble);
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
+  // Simple keyword responder
   function respond(question) {
     if (!businessInfo) {
-      addMessage("Bot", "Sorry, I don’t have any info yet.");
+      addMessage("Bot", "I don’t have info loaded yet.");
       return;
     }
-
-    // Simple keyword matching
     const lines = businessInfo.split("\n");
     let bestMatch = lines.find(line => line.toLowerCase().includes(question.toLowerCase()));
-
-    if (!bestMatch) {
-      bestMatch = "Sorry, I couldn't find an answer. Please call us directly.";
-    }
-
+    if (!bestMatch) bestMatch = "Sorry, I couldn’t find that info. Please call us directly 📞.";
     addMessage("Bot", bestMatch);
   }
-
 
     
   </script>
