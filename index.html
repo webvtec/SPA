@@ -2294,10 +2294,24 @@ function generateChatResponse(message) {
     return `To login or create an account, you'll be prompted when you try to book an appointment or submit a review. This helps us keep track of your bookings and preferences! 👤`;
   }
   
-  // General questions
-  if (normalized.includes('how long') || normalized.includes('duration')) {
-    return `Service durations vary:\n• Quick services (gel polish): 30 minutes\n• Full sets: 60-90 minutes\n• Detailed nail art: 15+ minutes per design\n\nWe'll give you an estimated time when you book! ⏰`;
+// General questions
+if (normalized.includes('how long') || normalized.includes('duration')) {
+  // Check if asking about a specific service
+  const serviceMatches = [];
+  Object.values(CHATBOT_CONFIG.services).flat().forEach(service => {
+    if (normalized.includes(service.name.toLowerCase()) || 
+        normalized.includes(service.name.toLowerCase().replace(/[^a-z]/g, ''))) {
+      serviceMatches.push(service);
+    }
+  });
+  
+  if (serviceMatches.length > 0) {
+    const service = serviceMatches[0];
+    return `${service.name} takes approximately ${service.duration}.`;
   }
+  
+  return `Service durations vary:\n• Quick services (gel polish): 30 minutes\n• Full sets: 60-90 minutes\n• Detailed nail art: 15+ minutes per design\n\nWe'll give you an estimated time when you book! ⏰`;
+}
   
   if (normalized.includes('deposit') || normalized.includes('down payment')) {
     return `Deposits are handled on a case-by-case basis. You can pay via bank transfer using the payment info in our menu. Use your booking number as reference! 💳`;
