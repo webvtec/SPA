@@ -2964,6 +2964,7 @@ ${orderSummary}
 
 
 
+
 // 🚀 VERSATILE AI CHATBOT - Copy & Paste for Any Business
 // ================================================================
 // CONFIGURATION - CUSTOMIZE FOR EACH BUSINESS
@@ -2985,11 +2986,11 @@ const CHATBOT_CONFIG = {
     "Feel free to ask about our treatments, pricing, location, or how to book!"
   ],
 
-  // 🔹 Smart keyword categories (automatically adapts to business type)
+  // 🔹 Enhanced keyword categories (automatically adapts to business type)
   keywords: {
-    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i'],
-    pricing: ['price', 'cost', 'how much', 'fee', 'charge', 'rate', '$', 'money', 'expensive'],
-    services: ['service', 'what do you', 'offer', 'available', 'menu', 'treatment', 'do you have'],
+    booking: ['book', 'appointment', 'schedule', 'reserve', 'available', 'when can i', 'today', 'tomorrow', 'this week', 'availability', 'free', 'slot'],
+    pricing: ['price', 'cost', 'how much', 'fee', 'charge', 'rate', '$', 'money', 'expensive', 'budget', 'affordable', 'cheap', 'deal', 'special'],
+    services: ['service', 'what do you', 'offer', 'available', 'menu', 'treatment', 'do you have', 'nail', 'manicure', 'pedicure', 'polish', 'gel', 'acrylic'],
     location: ['location', 'where', 'address', 'find you', 'directions', 'how to get'],
     hours: ['hours', 'open', 'closed', 'time', 'when', 'operating'],
     contact: ['contact', 'phone', 'call', 'reach', 'number', 'email']
@@ -2997,7 +2998,7 @@ const CHATBOT_CONFIG = {
 };
 
 // ================================================================
-// CORE CHATBOT ENGINE - NO NEED TO MODIFY
+// CORE CHATBOT ENGINE - FULLY FIXED VERSION
 // ================================================================
 
 class SmartChatbot {
@@ -3006,6 +3007,8 @@ class SmartChatbot {
     this.businessInfo = "";
     this.conversationStarted = false;
     this.context = [];
+    this.docLoadAttempts = 0;
+    this.maxLoadAttempts = 3;
     this.initializeElements();
     this.loadBusinessData();
   }
@@ -3022,7 +3025,8 @@ class SmartChatbot {
 
   bindEvents() {
     this.chatBtn.onclick = () => this.openChat();
-    this.closeChat.onclick = () => this.closeChat();
+    // FIXED: Corrected method name
+    this.closeChat.onclick = () => this.closeChatWindow();
     this.sendBtn.onclick = () => this.sendMessage();
     this.chatInput.addEventListener("keypress", e => {
       if (e.key === "Enter") this.sendMessage();
@@ -3030,16 +3034,69 @@ class SmartChatbot {
   }
 
   async loadBusinessData() {
+    this.docLoadAttempts++;
     try {
-      // Convert Google Docs edit URL to export URL
-      const exportUrl = this.config.docUrl.replace('/edit?usp=drivesdk', '/export?format=txt');
+      // FIXED: Enhanced Google Docs URL handling
+      let exportUrl = this.config.docUrl;
+      
+      // Handle different Google Docs URL formats
+      if (exportUrl.includes('/edit')) {
+        exportUrl = exportUrl.replace(/\/edit.*$/, '/export?format=txt');
+      } else if (exportUrl.includes('docs.google.com')) {
+        // Extract document ID and create proper export URL
+        const docIdMatch = exportUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (docIdMatch) {
+          const docId = docIdMatch[1];
+          exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
+        }
+      }
+      
+      console.log("🔄 Attempting to load business data from:", exportUrl);
+      
       const response = await fetch(exportUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const text = await response.text();
+      
+      if (text.trim().length < 50) {
+        throw new Error("Document appears to be empty or inaccessible");
+      }
+      
       this.businessInfo = this.cleanDocumentText(text);
       console.log("✅ Business data loaded successfully");
+      console.log("📄 Data preview:", this.businessInfo.substring(0, 200) + "...");
+      
     } catch (error) {
-      console.error("❌ Failed to load business data:", error);
-      this.businessInfo = "I'm having trouble accessing our current information. Please contact us directly for the most up-to-date details.";
+      console.error(`❌ Failed to load business data (attempt ${this.docLoadAttempts}/${this.maxLoadAttempts}):`, error);
+      
+      // FIXED: Better fallback with retry logic
+      if (this.docLoadAttempts < this.maxLoadAttempts) {
+        console.log("🔄 Retrying in 2 seconds...");
+        setTimeout(() => this.loadBusinessData(), 2000);
+        return;
+      }
+      
+      // Final fallback with helpful spa information
+      this.businessInfo = `Welcome to ${this.config.businessName}! 
+      
+      While I'm having trouble accessing our detailed information right now, I can still help you with general questions about our spa services.
+      
+      Common services we typically offer:
+      • Professional manicures and pedicures
+      • Gel polish application and removal
+      • Nail art and designs
+      • Relaxing spa treatments
+      • Hand and foot care treatments
+      
+      For current pricing, availability, and specific services:
+      📞 Please call us directly
+      📍 Visit our location
+      💻 Check our website or social media
+      
+      I'm still here to help answer any general questions about nail spa services!`;
     }
   }
 
@@ -3056,6 +3113,8 @@ class SmartChatbot {
       this.addMessage("Bot", this.config.greeting);
       this.conversationStarted = true;
     }
+    // Focus input for better UX
+    setTimeout(() => this.chatInput.focus(), 100);
   }
 
   closeChatWindow() {
@@ -3075,7 +3134,39 @@ class SmartChatbot {
       this.context.shift();
     }
     
-    setTimeout(() => this.generateResponse(msg), 300);
+    // Show typing indicator
+    this.showTypingIndicator();
+    setTimeout(() => {
+      this.hideTypingIndicator();
+      this.generateResponse(msg);
+    }, 300);
+  }
+
+  showTypingIndicator() {
+    const indicator = document.createElement("div");
+    indicator.id = "typing-indicator";
+    indicator.style.cssText = `
+      margin: 10px 0;
+      padding: 12px 15px;
+      border-radius: 18px;
+      max-width: 80%;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      color: #666;
+      margin-right: auto;
+      border: 1px solid #dee2e6;
+      font-style: italic;
+      opacity: 0.8;
+    `;
+    indicator.innerHTML = "🤖 Assistant is typing...";
+    this.chatMsgs.appendChild(indicator);
+    this.chatMsgs.scrollTop = this.chatMsgs.scrollHeight;
+  }
+
+  hideTypingIndicator() {
+    const indicator = document.getElementById("typing-indicator");
+    if (indicator) {
+      indicator.remove();
+    }
   }
 
   addMessage(sender, text) {
@@ -3091,6 +3182,7 @@ class SmartChatbot {
       line-height: 1.4;
       font-size: 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      animation: slideIn 0.3s ease-out;
       ${isBot ? 
         'background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); color: #333; margin-right: auto; border: 1px solid #dee2e6;' : 
         'background: linear-gradient(135deg, #E58BBE 0%, #d63384 100%); color: white; margin-left: auto; text-align: right;'
@@ -3109,11 +3201,13 @@ class SmartChatbot {
   }
 
   formatMessage(text) {
-    // Add line breaks and format currency
+    // FIXED: Enhanced formatting with better currency and text styling
     return text
-      .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$$1</strong>')
+      .replace(/\$(\d+(?:,\d{3})*(?:\.\d{2})?)/g, '<strong style="color: #28a745;">$$1</strong>')
       .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/•/g, '•'); // Ensure bullet points render properly
   }
 
   generateResponse(userMessage) {
@@ -3134,11 +3228,11 @@ class SmartChatbot {
     }
 
     if (this.isThanking(normalizedMsg)) {
-      return "You're very welcome! Is there anything else you'd like to know?";
+      return "You're very welcome! Is there anything else you'd like to know about our services?";
     }
 
     if (this.isGoodbye(normalizedMsg)) {
-      return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you!`;
+      return `Thank you for your interest in ${this.config.businessName}! Have a wonderful day, and we look forward to serving you soon! 💅✨`;
     }
 
     // Process specific queries
@@ -3154,78 +3248,95 @@ class SmartChatbot {
   }
 
   isGreeting(msg) {
-    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'hola'];
+    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'hola', 'sup', 'what\'s up'];
     return greetings.some(greeting => msg.includes(greeting));
   }
 
   isThanking(msg) {
-    return msg.includes('thank') || msg.includes('thanks') || msg.includes('appreciate');
+    return msg.includes('thank') || msg.includes('thanks') || msg.includes('appreciate') || msg.includes('thx');
   }
 
   isGoodbye(msg) {
-    const goodbyes = ['bye', 'goodbye', 'see you', 'talk later', 'thanks again'];
+    const goodbyes = ['bye', 'goodbye', 'see you', 'talk later', 'thanks again', 'gotta go', 'ttyl'];
     return goodbyes.some(goodbye => msg.includes(goodbye));
   }
 
   identifyQueryType(msg) {
-    for (const [type, keywords] of Object.entries(this.config.keywords)) {
-      if (keywords.some(keyword => msg.includes(keyword))) {
+    // FIXED: Enhanced keyword matching with better spa-specific terms
+    const enhancedKeywords = {
+      ...this.config.keywords,
+      services: [...this.config.keywords.services, 'nail', 'manicure', 'pedicure', 'polish', 'gel', 'acrylic', 'treatment', 'spa'],
+      pricing: [...this.config.keywords.pricing, 'budget', 'affordable', 'cheap', 'expensive', 'deal', 'special', 'discount'],
+      booking: [...this.config.keywords.booking, 'today', 'tomorrow', 'this week', 'availability', 'free', 'slot', 'when']
+    };
+    
+    for (const [type, keywords] of Object.entries(enhancedKeywords)) {
+      if (keywords.some(keyword => msg.includes(keyword.toLowerCase()))) {
         return type;
       }
     }
     
-    // Advanced pattern recognition
-    if (/what.*do.*you.*(?:have|offer|provide)/.test(msg)) return 'services';
-    if (/how.*(?:much|expensive|cost)/.test(msg)) return 'pricing';
-    if (/(?:when|what time).*open/.test(msg)) return 'hours';
-    if (/where.*(?:located|find)/.test(msg)) return 'location';
+    // FIXED: More specific pattern recognition
+    if (/what.*(?:services|treatments|do you|nail)/.test(msg)) return 'services';
+    if (/how.*much|cost|price|expensive|afford/.test(msg)) return 'pricing';
+    if (/book|appointment|schedule|available|when.*can/.test(msg)) return 'booking';
+    if (/hours|open|closed|time|when.*open/.test(msg)) return 'hours';
+    if (/where|location|address|find|directions/.test(msg)) return 'location';
+    if (/contact|phone|call|number|email/.test(msg)) return 'contact';
     
     return 'general';
   }
 
   extractRelevantInfo(query, queryType) {
     const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-    const lines = this.businessInfo.split(/[.!?]+/).filter(line => line.trim().length > 15);
+    // FIXED: Better text splitting that preserves sentences
+    const sentences = this.businessInfo.split(/[.!?]+/).filter(line => line.trim().length > 10);
     
     let bestMatches = [];
     
-    for (let line of lines) {
-      const lineLower = line.toLowerCase();
+    for (let sentence of sentences) {
+      const sentenceLower = sentence.toLowerCase().trim();
+      if (sentenceLower.length < 5) continue; // Skip very short fragments
+      
       let score = 0;
       
-      // Score based on query words
+      // FIXED: More accurate word matching
       queryWords.forEach(word => {
-        if (lineLower.includes(word)) score += 2;
-        if (lineLower.includes(word.substring(0, Math.max(4, word.length - 2)))) score += 1;
+        if (sentenceLower.includes(word.toLowerCase())) {
+          score += 3; // Exact word match
+        }
+        // Fuzzy matching for related terms
+        if (word.length > 4 && sentenceLower.includes(word.substring(0, word.length - 1))) {
+          score += 1;
+        }
       });
       
-      // Bonus for query type keywords
+      // FIXED: Better keyword matching for query types
       if (queryType && this.config.keywords[queryType]) {
         this.config.keywords[queryType].forEach(keyword => {
-          if (lineLower.includes(keyword)) score += 3;
+          if (sentenceLower.includes(keyword.toLowerCase())) {
+            score += 5; // Higher weight for category matches
+          }
         });
       }
       
+      // FIXED: Bonus for sentences that look like they contain useful info
+      if (sentenceLower.includes('$') || sentenceLower.match(/\d+/)) score += 2;
+      if (sentenceLower.includes(this.config.businessName.toLowerCase())) score += 2;
+      if (sentenceLower.includes('nail') || sentenceLower.includes('spa')) score += 1;
+      
       if (score > 0) {
-        bestMatches.push({ text: line.trim(), score });
+        bestMatches.push({ text: sentence.trim(), score });
       }
     }
     
     bestMatches.sort((a, b) => b.score - a.score);
     
-    // Return top matches, combined intelligently
-    const topMatches = bestMatches.slice(0, 3);
-    if (topMatches.length === 0) return null;
+    if (bestMatches.length === 0) return null;
     
-    if (topMatches.length === 1) {
-      return topMatches[0].text;
-    }
-    
-    // Combine related information
-    return topMatches
-      .map(match => match.text)
-      .join(' ')
-      .substring(0, 300); // Limit response length
+    // FIXED: Return top 2 most relevant sentences, properly formatted
+    const topMatches = bestMatches.slice(0, 2);
+    return topMatches.map(match => match.text).join('. ').substring(0, 400);
   }
 
   formatResponse(info, queryType) {
@@ -3233,11 +3344,12 @@ class SmartChatbot {
     
     // Add contextual closing based on query type
     const contextualEndings = {
-      booking: " You can also use our online booking system for instant confirmation!",
-      pricing: " Contact us for any package deals or special offers!",
-      services: " Would you like to know more about any specific service?",
-      location: " Feel free to reach out if you need detailed directions!",
-      hours: " We look forward to welcoming you during our operating hours!"
+      booking: " 📅 Feel free to call us to schedule your appointment!",
+      pricing: " 💰 Contact us for current pricing and any special packages!",
+      services: " 💅 Would you like to know more about any specific service?",
+      location: " 📍 Feel free to reach out if you need detailed directions!",
+      hours: " ⏰ We look forward to welcoming you during our operating hours!",
+      contact: " 📞 Don't hesitate to reach out - we're here to help!"
     };
     
     if (contextualEndings[queryType] && response.length < 200) {
@@ -3248,30 +3360,87 @@ class SmartChatbot {
   }
 
   generateSmartFallback(originalMsg, queryType) {
-    const fallbacks = this.config.fallbackResponses;
-    let response = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-    
-    // Customize fallback based on query type
-    const suggestions = {
-      general: "Try asking about our services, pricing, location, or booking information!",
-      services: "Ask me about specific treatments or services you're interested in!",
-      pricing: "Feel free to ask about costs for specific services!",
-      booking: "I can help you with appointment and scheduling information!",
-      location: "Need directions or information about our location?",
-      hours: "Want to know when we're open? Just ask!"
+    // FIXED: More specific fallback responses based on what user might be asking
+    const specificFallbacks = {
+      services: `I can help you learn about our nail services! 💅 Try asking:
+      
+      • "What nail treatments do you offer?"
+      • "Do you do manicures and pedicures?"
+      • "What types of polish do you use?"
+      • "Do you offer nail art?"`,
+      
+      pricing: `For current pricing information, try asking:
+      
+      • "How much does a manicure cost?"
+      • "What are your nail service prices?"
+      • "Do you have any package deals?"
+      • "What's the cost for gel polish?"`,
+      
+      booking: `For appointments, ask:
+      
+      • "How do I book an appointment?"
+      • "What's your availability this week?"
+      • "Can I schedule for today?"
+      • "Do you take walk-ins?"`,
+      
+      hours: `Ask about our schedule:
+      
+      • "What are your hours?"
+      • "When are you open?"
+      • "Are you open on weekends?"`,
+      
+      location: `For location info, try:
+      
+      • "Where are you located?"
+      • "What's your address?"
+      • "How do I find you?"`,
+      
+      contact: `For contact information:
+      
+      • "What's your phone number?"
+      • "How can I reach you?"
+      • "Do you have email?"`,
+      
+      general: `I'm here to help with questions about ${this.config.businessName}! 💅✨
+      
+      Try asking about:
+      • 🎨 Our nail services and treatments
+      • 💰 Pricing information  
+      • 📅 Booking appointments
+      • 📍 Our location and hours
+      • ☎️ Contact information
+      • 🌟 Special offers or packages`
     };
     
-    if (suggestions[queryType]) {
-      response += " " + suggestions[queryType];
+    return specificFallbacks[queryType] || specificFallbacks.general;
+  }
+
+  // FIXED: Add method to test if Google Docs is accessible
+  async testDocumentAccess() {
+    try {
+      const response = await fetch(this.config.docUrl.replace(/\/edit.*$/, '/export?format=txt'));
+      return response.ok;
+    } catch {
+      return false;
     }
-    
-    // Replace placeholders
-    response = response.replace('{businessType}', this.config.businessType);
-    response = response.replace('{businessName}', this.config.businessName);
-    
-    return response;
   }
 }
+
+// Add CSS animation for smooth message appearance
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+document.head.appendChild(style);
 
 // ================================================================
 // INITIALIZE CHATBOT
