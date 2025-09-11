@@ -818,11 +818,12 @@
 </div>
 
 
-<!-- Chatbot UI -->
+<!-- Chatbot Widget -->
 <div class="chatbot-container">
   <button class="chatbot-toggle" onclick="toggleChatbot()">
     <span>💬</span>
   </button>
+
   <div class="chatbot-window" id="chatbotWindow">
     <div class="chatbot-header">
       AI Assistant
@@ -830,11 +831,14 @@
     </div>
     <div class="chatbot-messages" id="chatbotMessages"></div>
     <div class="chatbot-input-container">
-      <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter'){sendChatbotMessage()}"/>
+      <input type="text" id="chatbotInput" class="chatbot-input"
+             placeholder="Type a message..."
+             onkeydown="if(event.key==='Enter'){sendChatbotMessage()}"/>
       <button class="chatbot-send" onclick="sendChatbotMessage()">➤</button>
     </div>
   </div>
 </div>
+
 
 
 <!-- ✅ Scripts -->
@@ -2146,10 +2150,11 @@ async function sendChatbotMessage() {
       <span></span><span></span><span></span>
     </div>`;
   document.getElementById("chatbotMessages").appendChild(typing);
-  document.getElementById("chatbotMessages").scrollTop = document.getElementById("chatbotMessages").scrollHeight;
+  document.getElementById("chatbotMessages").scrollTop =
+      document.getElementById("chatbotMessages").scrollHeight;
 
   try {
-    // ✅ Replace with your Hugging Face Space endpoint
+    // 🔗 Replace with your Hugging Face Space API URL
     const response = await fetch("https://huggingface.co/spaces/<username>/<space-name>/api/predict/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2157,18 +2162,16 @@ async function sendChatbotMessage() {
     });
 
     const result = await response.json();
-    const reply = result.data[0] || "Sorry, I couldn’t generate a response.";
+    const reply = result.data[0] || "⚠️ Sorry, no response.";
 
-    typing.remove(); // remove "typing..."
+    typing.remove();
     appendChatMessage("bot", reply);
-
   } catch (error) {
     typing.remove();
     appendChatMessage("bot", "⚠️ Error connecting to server.");
     console.error(error);
   }
 }
-
 
     
   </script>
