@@ -2084,25 +2084,19 @@ const input = document.getElementById("message");
 async function callGradioAPI(text) {
     try {
         console.log("Calling API with message:", text);
-        
-        // This is the correct format for your ChatInterface
-        const response = await fetch(`${SPACE_URL}/api/predict`, {
+
+        const response = await fetch(`${SPACE_URL}/chat/completions`, {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                data: [
-                    text,  // message
-                    [],    // history (empty array for new conversation)
-                    "You are a friendly and helpful nail art specialist named Navia. Help users with nail care, designs, and beauty tips.", // system_message
-                    512,   // max_tokens
-                    0.7,   // temperature  
-                    0.95   // top_p
+                messages: [
+                    { role: "system", content: "You are a friendly and helpful nail art specialist named Navia. Help users with nail care, designs, and beauty tips." },
+                    { role: "user", content: text }
                 ],
-                event_data: null,
-                fn_index: 0,
-                trigger_id: Math.floor(Math.random() * 1000000)
+                max_tokens: 512,
+                temperature: 0.7,
+                top_p: 0.95,
+                stream: false
             })
         });
 
@@ -2114,27 +2108,15 @@ async function callGradioAPI(text) {
 
         const result = await response.json();
         console.log("API result:", result);
-        
-        // The response should be in result.data[0]
-        if (result && result.data && result.data.length > 0) {
-            return result.data[0] || "I received your message but couldn't generate a response.";
-        }
-        
-        return "No response received from the server.";
-        
+
+        // Extract reply
+        return result?.choices?.[0]?.message?.content || "No response from Navia.";
     } catch (error) {
         console.error("API call failed:", error);
-        
-        // Try the streaming approach as fallback
-        try {
-            return await tryStreamingAPI(text);
-        } catch (streamError) {
-            console.error("Streaming API also failed:", streamError);
-            throw new Error(`Connection failed: ${error.message}`);
-        }
+        throw new Error(`Connection failed: ${error.message}`);
     }
-}
-
+ }
+    
 async function tryStreamingAPI(text) {
     console.log("Trying streaming API...");
     
