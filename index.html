@@ -1937,16 +1937,23 @@ async function sendMessage() {
   input.value = "";
 
   try {
-    // 🔥 FIXED URL: must be /api/chat
+    // ✅ Correct API route
     const res = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ inputs: userMessage }),
-});
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs: userMessage }),
+    });
 
+    // Always read text first, then try parsing JSON
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: "Server did not return valid JSON", raw: text };
+    }
 
-    const data = await res.json();
-
+    // Determine bot reply
     let botReply = "";
     if (Array.isArray(data) && data[0]?.generated_text) {
       botReply = data[0].generated_text;
@@ -1956,10 +1963,12 @@ async function sendMessage() {
       botReply = data.error || "🤖 Sorry, I didn’t understand.";
     }
 
+    // Append bot reply
     chatBox.innerHTML += `<div style="margin:5px 0;">
                             <b>Bot:</b> ${botReply}
                           </div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
+
   } catch (err) {
     chatBox.innerHTML += `<div style="margin:5px 0; color:red;">
                             Error: ${err.message}
