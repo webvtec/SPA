@@ -2242,7 +2242,42 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("Space URL:", SPACE_URL);
 });
 
-    
+
+
+// Enter key
+if (input) {
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+}
+
+// Send button
+const sendBtn = document.getElementById("sendBtn");
+if (sendBtn) {
+    sendBtn.addEventListener("click", () => {
+        sendMessage();
+    });
+}
+
+// Toggle button (from outside)
+function toggleChatbot() {
+    const window = document.getElementById("chatbotWindow");
+    if (!window) return;
+    window.style.display = (window.style.display === "flex") ? "none" : "flex";
+}
+
+// Close button (inside chatbot window)
+const closeBtn = document.getElementById("closeBtn");
+if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+        const window = document.getElementById("chatbotWindow");
+        if (window) window.style.display = "none";
+    });
+}
+
   </script>
 </body>
 </html>
