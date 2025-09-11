@@ -2118,9 +2118,12 @@ const chat = document.getElementById("chat");
 let chatbotOpen = false;
 
 function toggleChatbot() {
-  const windowEl = document.getElementById("chatbotWindow");
-  chatbotOpen = !chatbotOpen;
-  windowEl.style.display = chatbotOpen ? "flex" : "none";
+  const window = document.getElementById('chatbotWindow');
+  if (window.style.display === 'flex') {
+    window.style.display = 'none';
+  } else {
+    window.style.display = 'flex';
+  }
 }
 
 function appendChatMessage(sender, text) {
