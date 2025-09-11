@@ -2158,7 +2158,7 @@ async function sendChatbotMessage() {
 
   try {
     // 🔗 Replace with your Hugging Face Space API URL
-    const response = await fetch("https://huggingface.co/spaces/<username>/<space-name>/api/predict/", {
+    const response = await fetch("https://huggingface.co/spaces/WebVtec/nails-by-navia-bot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data: [text] })
