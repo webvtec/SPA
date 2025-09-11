@@ -1,0 +1,9 @@
+{
+  "name": "chatbot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {},
+  "engines": {
+    "node": "18.x"
+  }
+}
