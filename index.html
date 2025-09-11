@@ -2145,17 +2145,41 @@ let chatContext = {
   expectingFollowUp: false
 };
 
+// Simple intent detection function (replaces ReasoningEngine)
+function analyzeIntent(text) {
+  const intents = {
+    pricing: /price|cost|much|expensive|cheap|fee|charge/,
+    duration: /long|time|duration|take.*minutes|how.*long|minutes|hours/,
+    booking: /book|appointment|schedule|reserve|available/,
+    location: /where|location|address|direction|find/,
+    contact: /phone|call|contact|number|reach/,
+    hours: /hours|open|close|when.*open|operating/,
+    services: /service|what.*do|offer|available|nail/,
+    social: /instagram|tiktok|social|follow/
+  };
+
+  for (const [intent, pattern] of Object.entries(intents)) {
+    if (pattern.test(text)) {
+      return intent;
+    }
+  }
+  return 'general';
+}
+
 // Enhanced Chatbot Functions
 function toggleChat() {
   const window = document.getElementById('chatbot-window');
   const icon = document.getElementById('chatbot-icon');
   
-  if (window.style.display === 'flex') {
-    closeChat();
-  } else {
-    window.style.display = 'flex';
-    icon.textContent = '×';
-    document.getElementById('chatbot-input').focus();
+  if (window && icon) {
+    if (window.style.display === 'flex') {
+      closeChat();
+    } else {
+      window.style.display = 'flex';
+      icon.textContent = '×';
+      const input = document.getElementById('chatbot-input');
+      if (input) input.focus();
+    }
   }
 }
 
@@ -2163,8 +2187,10 @@ function closeChat() {
   const window = document.getElementById('chatbot-window');
   const icon = document.getElementById('chatbot-icon');
   
-  window.style.display = 'none';
-  icon.textContent = '💬';
+  if (window && icon) {
+    window.style.display = 'none';
+    icon.textContent = '💬';
+  }
 }
 
 function handleChatKeyPress(event) {
@@ -2175,12 +2201,12 @@ function handleChatKeyPress(event) {
 
 function sendChatMessage() {
   const input = document.getElementById('chatbot-input');
-  const message = input.value.trim();
+  const message = input ? input.value.trim() : '';
   
   if (!message) return;
   
   addChatMessage(message, 'user');
-  input.value = '';
+  if (input) input.value = '';
   
   showTypingIndicator();
   
@@ -2193,11 +2219,15 @@ function sendChatMessage() {
 
 function addChatMessage(message, sender) {
   const messagesContainer = document.getElementById('chatbot-messages');
+  if (!messagesContainer) return;
+  
   const messageDiv = document.createElement('div');
   messageDiv.className = `chatbot-message ${sender}`;
   
+  // Format message with line breaks
+  const formattedMessage = message.replace(/\n/g, '<br>');
   messageDiv.innerHTML = `
-    <div class="message-content">${message}</div>
+    <div class="message-content">${formattedMessage}</div>
   `;
   
   messagesContainer.appendChild(messageDiv);
@@ -2206,6 +2236,8 @@ function addChatMessage(message, sender) {
 
 function showTypingIndicator() {
   const messagesContainer = document.getElementById('chatbot-messages');
+  if (!messagesContainer) return;
+  
   const typingDiv = document.createElement('div');
   typingDiv.className = 'chatbot-message bot';
   typingDiv.id = 'typing-indicator';
@@ -2317,15 +2349,15 @@ function isFollowUpQuestion(text) {
 function generateChatResponse(message) {
   const normalized = normalizeText(message);
   
-  // Use reasoning engine to analyze the question
-  const analysis = ReasoningEngine.analyzeIntent(normalized, chatContext);
+  // Simple intent detection
+  const intent = analyzeIntent(normalized);
   const matchedService = findMatchingService(normalized);
   
   // Handle follow-up questions first
   if (chatContext.expectingFollowUp && isFollowUpQuestion(normalized)) {
     chatContext.expectingFollowUp = false;
     
-    if (chatContext.lastTopic === 'services' && analysis.primary === 'pricing') {
+    if (chatContext.lastTopic === 'services' && intent === 'pricing') {
       return "All our service prices are listed on the booking page. Prices start from the amounts shown but may vary based on complexity and design requirements.";
     }
     
@@ -2335,17 +2367,16 @@ function generateChatResponse(message) {
     }
   }
   
-  // Use reasoning engine for intelligent responses
-  const intelligentResponse = ReasoningEngine.generateResponse(analysis.primary, normalized, matchedService, chatContext);
-  if (intelligentResponse) {
-    chatContext.lastTopic = analysis.primary;
-    if (analysis.primary === 'pricing' || analysis.primary === 'duration') {
-      chatContext.lastService = matchedService;
-    }
-    return intelligentResponse;
+  // Location and contact info
+  if (intent === 'location' || normalized.match(/where|location|address|direction|find/)) {
+    chatContext.lastTopic = 'location';
+    return `We're located at:\n\n${CHATBOT_CONFIG.location}\n\nPhone: ${CHATBOT_CONFIG.phone}`;
   }
   
-  // Pattern-based responses for specific queries
+  if (intent === 'contact' || normalized.match(/phone|call|contact|number|reach/)) {
+    chatContext.lastTopic = 'contact';
+    return `You can contact us at:\n\nPhone: ${CHATBOT_CONFIG.phone}\nLocation: ${CHATBOT_CONFIG.location}`;
+  }
   
   // Greeting responses
   if (normalized.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
@@ -2372,7 +2403,7 @@ function generateChatResponse(message) {
   }
   
   // Opening hours
-  if (normalized.match(/hours|open|close|time.*open/) && !matchedService) {
+  if ((intent === 'hours' || normalized.match(/hours|open|close|time.*open/)) && !matchedService) {
     chatContext.lastTopic = 'hours';
     chatContext.expectingFollowUp = true;
     let hoursText = `Here are our opening hours:\n\n`;
@@ -2382,17 +2413,17 @@ function generateChatResponse(message) {
     return hoursText;
   }
   
-  // Specific service responses with reasoning
+  // Specific service responses
   if (matchedService) {
     chatContext.lastService = matchedService;
     
-    if (analysis.questionType === 'how' && normalized.match(/long|duration|time.*take/)) {
+    if (intent === 'duration' || normalized.match(/long|duration|time.*take/)) {
       chatContext.lastTopic = 'duration';
       chatContext.expectingFollowUp = true;
       return `${matchedService.name} takes approximately ${matchedService.duration}.`;
     }
     
-    if (analysis.primary === 'pricing' || normalized.match(/price|cost|much/)) {
+    if (intent === 'pricing' || normalized.match(/price|cost|much/)) {
       chatContext.lastTopic = 'pricing';
       chatContext.expectingFollowUp = true;
       return `${matchedService.name} starts at ${matchedService.price}. Prices may vary based on complexity and are subject to change.`;
@@ -2405,20 +2436,20 @@ function generateChatResponse(message) {
   }
   
   // Social media
-  if (normalized.match(/instagram|insta|tiktok|social/)) {
+  if (intent === 'social' || normalized.match(/instagram|insta|tiktok|social/)) {
     chatContext.lastTopic = 'social';
     return `Follow us on social media!\n\nInstagram: ${CHATBOT_CONFIG.socialMedia.instagram}\nTikTok: ${CHATBOT_CONFIG.socialMedia.tiktok}\n\nSee our latest nail art and get inspired!`;
   }
   
   // General services (when no specific service matched)
-  if (normalized.match(/service|nail|manicure|pedicure|acrylic|gel/) && !matchedService) {
+  if (intent === 'services' || (normalized.match(/service|nail|manicure|pedicure|acrylic|gel/) && !matchedService)) {
     chatContext.lastTopic = 'services';
     chatContext.expectingFollowUp = true;
     
     let serviceText = `Here are our main services:\n\n`;
     
     Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
-      serviceText += `**${category}:**\n`;
+      serviceText += `${category}:\n`;
       services.slice(0, 3).forEach(service => {
         serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
       });
@@ -2429,8 +2460,8 @@ function generateChatResponse(message) {
     return serviceText;
   }
   
-  // Website guidance with reasoning
-  if (analysis.primary === 'booking' || normalized.match(/book|appointment/)) {
+  // Website guidance
+  if (intent === 'booking' || normalized.match(/book|appointment/)) {
     chatContext.lastTopic = 'booking';
     chatContext.expectingFollowUp = true;
     return `To book an appointment:\n\n1. Click the menu button (☰) at top left\n2. Select "📅 BOOKING"\n3. Fill in your details and pick your services\n4. Choose your preferred date and time\n\nYou'll need to create an account or log in to complete your booking.`;
@@ -2457,14 +2488,27 @@ function generateChatResponse(message) {
     return `You're welcome! Thanks for choosing ${CHATBOT_CONFIG.businessName}! Have a beautiful day!`;
   }
   
-  // Contextually intelligent default responses
+  // Contextual responses for unclear messages
   if (chatContext.lastTopic) {
-    const contextualResponse = ReasoningEngine.generateClarification(null, chatContext);
+    let contextualResponse = "";
+    switch (chatContext.lastTopic) {
+      case 'services':
+        contextualResponse = "Would you like to know more about a specific service, pricing, or how to book?";
+        break;
+      case 'booking':
+        contextualResponse = "Do you need help with booking an appointment or checking existing bookings?";
+        break;
+      case 'hours':
+        contextualResponse = "Do you have any other questions about our operating hours?";
+        break;
+      default:
+        contextualResponse = "How else can I help you today?";
+    }
     chatContext.expectingFollowUp = false;
     return `I didn't quite understand that. ${contextualResponse}`;
   }
   
-  // Final fallback with reasoning
+  // Final fallback responses
   chatContext.expectingFollowUp = true;
   const reasonedDefaults = [
     `I'd be happy to help! You can ask me about our services, prices, opening hours, location, booking process, or contact information.`,
@@ -2474,7 +2518,6 @@ function generateChatResponse(message) {
   
   return reasonedDefaults[Math.floor(Math.random() * reasonedDefaults.length)];
 }
-    
   </script>
 </body>
 </html>
