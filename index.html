@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nails by Navia Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            height: 100vh;
+            padding: 10px;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            height: calc(100vh - 20px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .status {
+            padding: 10px 20px;
+            background: #f0f8ff;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+        }
+        
+        .msg {
+            margin: 15px 0;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 85%;
+            word-wrap: break-word;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        
+        .msg.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .msg.bot {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .input-area {
+            padding: 15px 20px;
+            background: white;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+            background: #f8f9fa;
+        }
+        
+        #messageInput:focus {
+            border-color: #667eea;
+            background: white;
+        }
+        
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            color: #667eea;
+        }
+        
+        .error {
+            color: #e53e3e;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>💅 Nails by Navia</h1>
+            <p>Your nail art assistant</p>
+        </div>
+        
+        <div id="status" class="status">⏳ Connecting...</div>
+        
+        <div id="chat"></div>
+        
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="Ask about nail colors, designs..."
+                disabled
+            >
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                ➤
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const SPACE_URL = "webvtec/nails-by-navia-bot";
+        const chat = document.getElementById("chat");
+        const input = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const status = document.getElementById("status");
+        
+        let client = null;
+        let connected = false;
+        
+        // Connect to your Space
+        async function init() {
+            try {
+                status.innerHTML = "🚀 Connecting to Navia...";
+                
+                client = await window.gradio.client(SPACE_URL);
+                connected = true;
+                
+                status.innerHTML = "✅ Connected! Ready to chat!";
+                status.style.background = "#d4edda";
+                status.style.color = "#155724";
+                
+                input.disabled = false;
+                sendBtn.disabled = false;
+                
+                addMessage("Hi! I'm Navia 💅 Ask me about nail colors, designs, or care tips!", "bot");
+                
+            } catch (error) {
+                console.error("Connection failed:", error);
+                status.innerHTML = `❌ Can't connect: ${error.message}`;
+                status.style.background = "#f8d7da";
+                status.style.color = "#721c24";
+            }
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text || !connected) return;
+            
+            addMessage(text, "user");
+            input.value = "";
+            
+            const thinking = addMessage("💭 Thinking...", "bot");
+            
+            try {
+                const result = await client.predict("/chat", {
+                    message: text,
+                    history: [],
+                    system_message: "You are Navia",
+                    max_tokens: 100,
+                    temperature: 0.7,
+                    top_p: 0.9
+                });
+                
+                thinking.textContent = result.data[0] || "I'm here to help! 💅";
+                
+            } catch (error) {
+                thinking.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        function addMessage(text, sender) {
+            const div = document.createElement("div");
+            div.className = "msg " + sender;
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+            return div;
+        }
+        
+        // Enter key to send
+        input.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Start when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
