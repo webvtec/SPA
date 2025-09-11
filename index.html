@@ -2085,6 +2085,7 @@ function getSelectedServices() {
 
 
   
+
 // Enhanced Chatbot Configuration - EASILY CUSTOMIZABLE FOR OTHER BUSINESSES
 const CHATBOT_CONFIG = {
   businessName: "NAILUXE NAILZ BY NAVIA",
@@ -2138,14 +2139,346 @@ const CHATBOT_CONFIG = {
   }
 };
 
+// ============================================
+// LIGHTWEIGHT AI SEARCH ENGINE
+// ============================================
+
+class LightweightAI {
+  constructor() {
+    this.knowledgeBase = [];
+    this.vectorIndex = new Map();
+    this.vocabulary = new Set();
+    this.idfScores = new Map();
+    this.initialized = false;
+    
+    this.init();
+  }
+
+  // Initialize the AI with business knowledge
+  init() {
+    this.buildKnowledgeBase();
+    this.buildVocabulary();
+    this.calculateIDF();
+    this.vectorizeKnowledge();
+    this.initialized = true;
+    console.log('AI Search Engine initialized with', this.knowledgeBase.length, 'knowledge entries');
+  }
+
+  // Build comprehensive knowledge base
+  buildKnowledgeBase() {
+    const kb = [];
+    
+    // Add services with enhanced descriptions
+    Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
+      services.forEach(service => {
+        kb.push({
+          id: `service_${service.name.toLowerCase().replace(/\s+/g, '_')}`,
+          type: 'service',
+          category: category,
+          title: service.name,
+          content: `${service.name} is a ${category.toLowerCase()} service that costs ${service.price} and takes ${service.duration}. This nail service includes professional treatment and styling.`,
+          metadata: {
+            price: service.price,
+            duration: service.duration,
+            category: category
+          },
+          keywords: [
+            ...service.name.toLowerCase().split(' '),
+            ...category.toLowerCase().split(' '),
+            'nail', 'beauty', 'salon', 'professional'
+          ]
+        });
+      });
+    });
+
+    // Add business information
+    kb.push({
+      id: 'business_hours',
+      type: 'hours',
+      title: 'Opening Hours',
+      content: `${CHATBOT_CONFIG.businessName} is open Monday 9AM-6PM, Wednesday through Saturday 9AM-6PM, and closed on Tuesday and Sunday. We provide nail services during business hours.`,
+      metadata: CHATBOT_CONFIG.openingHours,
+      keywords: ['hours', 'open', 'close', 'time', 'schedule', 'available', 'when']
+    });
+
+    kb.push({
+      id: 'business_location',
+      type: 'location',
+      title: 'Location and Contact',
+      content: `${CHATBOT_CONFIG.businessName} is located at ${CHATBOT_CONFIG.location}. You can contact us at ${CHATBOT_CONFIG.phone} for appointments and inquiries.`,
+      metadata: {
+        address: CHATBOT_CONFIG.location,
+        phone: CHATBOT_CONFIG.phone
+      },
+      keywords: ['location', 'address', 'where', 'find', 'contact', 'phone', 'call', 'mandeville', 'jamaica']
+    });
+
+    // Add policies
+    Object.entries(CHATBOT_CONFIG.policies).forEach(([key, policy]) => {
+      kb.push({
+        id: `policy_${key}`,
+        type: 'policy',
+        title: key.charAt(0).toUpperCase() + key.slice(1),
+        content: policy,
+        metadata: { policyType: key },
+        keywords: [key, 'policy', 'rule', 'guideline']
+      });
+    });
+
+    // Add social media
+    kb.push({
+      id: 'social_media',
+      type: 'social',
+      title: 'Social Media',
+      content: `Follow ${CHATBOT_CONFIG.businessName} on Instagram ${CHATBOT_CONFIG.socialMedia.instagram} and TikTok ${CHATBOT_CONFIG.socialMedia.tiktok} for latest nail art inspiration and updates.`,
+      metadata: CHATBOT_CONFIG.socialMedia,
+      keywords: ['social', 'instagram', 'tiktok', 'follow', 'inspiration', 'updates']
+    });
+
+    // Add booking information
+    kb.push({
+      id: 'booking_process',
+      type: 'booking',
+      title: 'How to Book',
+      content: 'To book an appointment, use the booking system on our website. Click the menu button, select booking, fill in your details, choose services and time. You need to create an account.',
+      metadata: { process: 'booking' },
+      keywords: ['book', 'appointment', 'schedule', 'reserve', 'booking', 'account', 'website']
+    });
+
+    this.knowledgeBase = kb;
+  }
+
+  // Build vocabulary from all content
+  buildVocabulary() {
+    this.knowledgeBase.forEach(item => {
+      const words = this.tokenize(item.content + ' ' + item.keywords.join(' '));
+      words.forEach(word => this.vocabulary.add(word));
+    });
+  }
+
+  // Calculate IDF (Inverse Document Frequency) scores
+  calculateIDF() {
+    const docCount = this.knowledgeBase.length;
+    
+    this.vocabulary.forEach(word => {
+      const docsWithWord = this.knowledgeBase.filter(item => {
+        const text = item.content + ' ' + item.keywords.join(' ');
+        return this.tokenize(text).includes(word);
+      }).length;
+      
+      this.idfScores.set(word, Math.log(docCount / (docsWithWord + 1)));
+    });
+  }
+
+  // Vectorize all knowledge base entries
+  vectorizeKnowledge() {
+    this.knowledgeBase.forEach(item => {
+      const text = item.content + ' ' + item.keywords.join(' ');
+      const vector = this.textToTFIDFVector(text);
+      this.vectorIndex.set(item.id, vector);
+    });
+  }
+
+  // Tokenize text into words
+  tokenize(text) {
+    return text.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2)
+      .filter(word => !this.isStopWord(word));
+  }
+
+  // Simple stop words filter
+  isStopWord(word) {
+    const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 'did', 'she', 'use', 'way', 'what', 'will']);
+    return stopWords.has(word);
+  }
+
+  // Convert text to TF-IDF vector
+  textToTFIDFVector(text) {
+    const words = this.tokenize(text);
+    const termFreq = new Map();
+    const vector = new Map();
+
+    // Calculate term frequency
+    words.forEach(word => {
+      termFreq.set(word, (termFreq.get(word) || 0) + 1);
+    });
+
+    // Calculate TF-IDF
+    termFreq.forEach((tf, word) => {
+      const idf = this.idfScores.get(word) || 0;
+      vector.set(word, tf * idf);
+    });
+
+    return vector;
+  }
+
+  // Calculate cosine similarity between two vectors
+  cosineSimilarity(vec1, vec2) {
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    const allWords = new Set([...vec1.keys(), ...vec2.keys()]);
+
+    allWords.forEach(word => {
+      const v1 = vec1.get(word) || 0;
+      const v2 = vec2.get(word) || 0;
+      
+      dotProduct += v1 * v2;
+      norm1 += v1 * v1;
+      norm2 += v2 * v2;
+    });
+
+    if (norm1 === 0 || norm2 === 0) return 0;
+    return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+  }
+
+  // Enhanced semantic search
+  semanticSearch(query, limit = 5) {
+    if (!this.initialized) {
+      console.warn('AI not initialized yet');
+      return [];
+    }
+
+    const queryVector = this.textToTFIDFVector(query);
+    const results = [];
+
+    this.knowledgeBase.forEach(item => {
+      const itemVector = this.vectorIndex.get(item.id);
+      const similarity = this.cosineSimilarity(queryVector, itemVector);
+      
+      if (similarity > 0.1) { // Threshold for relevance
+        results.push({
+          ...item,
+          similarity: similarity,
+          relevanceScore: this.calculateRelevanceScore(query, item, similarity)
+        });
+      }
+    });
+
+    return results
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, limit);
+  }
+
+  // Calculate enhanced relevance score
+  calculateRelevanceScore(query, item, similarity) {
+    let score = similarity * 100;
+
+    // Boost based on query type and item type matching
+    const queryLower = query.toLowerCase();
+    
+    if (queryLower.includes('price') || queryLower.includes('cost')) {
+      if (item.type === 'service') score *= 1.5;
+    }
+    
+    if (queryLower.includes('hour') || queryLower.includes('open')) {
+      if (item.type === 'hours') score *= 2.0;
+    }
+    
+    if (queryLower.includes('where') || queryLower.includes('location')) {
+      if (item.type === 'location') score *= 2.0;
+    }
+    
+    if (queryLower.includes('book') || queryLower.includes('appointment')) {
+      if (item.type === 'booking') score *= 1.8;
+    }
+
+    // Boost for exact keyword matches
+    const queryWords = this.tokenize(query);
+    const keywordMatches = queryWords.filter(word => 
+      item.keywords.includes(word) || item.title.toLowerCase().includes(word)
+    ).length;
+    
+    score += keywordMatches * 10;
+
+    return score;
+  }
+
+  // Generate intelligent response based on search results
+  generateIntelligentResponse(query, searchResults) {
+    if (searchResults.length === 0) {
+      return null;
+    }
+
+    const bestMatch = searchResults[0];
+    const queryLower = query.toLowerCase();
+
+    // Service-specific responses
+    if (bestMatch.type === 'service') {
+      if (queryLower.includes('price') || queryLower.includes('cost')) {
+        return `${bestMatch.title} costs ${bestMatch.metadata.price}. ${bestMatch.content}`;
+      }
+      if (queryLower.includes('time') || queryLower.includes('long')) {
+        return `${bestMatch.title} takes ${bestMatch.metadata.duration}. ${bestMatch.content}`;
+      }
+      return bestMatch.content;
+    }
+
+    // Other types
+    return bestMatch.content;
+  }
+
+  // Intent analysis with AI enhancement
+  analyzeIntentWithAI(query) {
+    const searchResults = this.semanticSearch(query, 3);
+    
+    let primaryIntent = 'general';
+    let confidence = 0;
+    let context = {};
+
+    if (searchResults.length > 0) {
+      const bestMatch = searchResults[0];
+      confidence = bestMatch.relevanceScore;
+      
+      switch (bestMatch.type) {
+        case 'service':
+          primaryIntent = 'service_inquiry';
+          context.service = bestMatch;
+          break;
+        case 'hours':
+          primaryIntent = 'hours_inquiry';
+          break;
+        case 'location':
+          primaryIntent = 'location_inquiry';
+          break;
+        case 'booking':
+          primaryIntent = 'booking_inquiry';
+          break;
+        case 'policy':
+          primaryIntent = 'policy_inquiry';
+          context.policy = bestMatch.metadata.policyType;
+          break;
+      }
+    }
+
+    return {
+      primary: primaryIntent,
+      confidence: confidence,
+      context: context,
+      searchResults: searchResults
+    };
+  }
+}
+
+// Initialize AI
+const AI = new LightweightAI();
+
+// ============================================
+// ENHANCED CHATBOT WITH AI REASONING
+// ============================================
+
 // Conversation context for follow-ups
 let chatContext = {
   lastTopic: null,
   lastService: null,
-  expectingFollowUp: false
+  expectingFollowUp: false,
+  conversationHistory: []
 };
 
-// Simple intent detection function (replaces ReasoningEngine)
+// Simple intent detection function (fallback)
 function analyzeIntent(text) {
   const intents = {
     pricing: /price|cost|much|expensive|cheap|fee|charge/,
@@ -2208,12 +2541,26 @@ function sendChatMessage() {
   addChatMessage(message, 'user');
   if (input) input.value = '';
   
+  // Add to conversation history
+  chatContext.conversationHistory.push({
+    role: 'user',
+    message: message,
+    timestamp: Date.now()
+  });
+  
   showTypingIndicator();
   
   setTimeout(() => {
     hideTypingIndicator();
     const response = generateChatResponse(message);
     addChatMessage(response, 'bot');
+    
+    // Add response to history
+    chatContext.conversationHistory.push({
+      role: 'bot',
+      message: response,
+      timestamp: Date.now()
+    });
   }, 800 + Math.random() * 800);
 }
 
@@ -2283,58 +2630,6 @@ function normalizeText(text) {
   return normalized;
 }
 
-// Intelligent service matching
-function findMatchingService(text) {
-  const allServices = Object.values(CHATBOT_CONFIG.services).flat();
-  
-  // Direct name match
-  for (let service of allServices) {
-    const serviceName = service.name.toLowerCase();
-    if (text.includes(serviceName)) {
-      return service;
-    }
-  }
-  
-  // Keyword matching with scoring
-  const keywords = {
-    'manicure': ['manicure', 'mani'],
-    'pedicure': ['pedicure', 'pedi'],
-    'gel': ['gel', 'polish'],
-    'acrylic': ['acrylic', 'acryl', 'full set', 'set'],
-    'french': ['french'],
-    'art': ['art', 'design'],
-    'xl': ['xl', 'extra large'],
-    'long': ['long'],
-    'medium': ['medium', 'med'],
-    'short': ['short'],
-    'coffin': ['coffin'],
-    'overlay': ['overlay']
-  };
-  
-  let bestMatch = null;
-  let bestScore = 0;
-  
-  for (let service of allServices) {
-    let score = 0;
-    const serviceName = service.name.toLowerCase();
-    
-    Object.entries(keywords).forEach(([key, terms]) => {
-      if (serviceName.includes(key)) {
-        terms.forEach(term => {
-          if (text.includes(term)) score += 1;
-        });
-      }
-    });
-    
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = service;
-    }
-  }
-  
-  return bestScore > 0 ? bestMatch : null;
-}
-
 // Context-aware response system
 function isFollowUpQuestion(text) {
   const followUpIndicators = [
@@ -2343,40 +2638,43 @@ function isFollowUpQuestion(text) {
   ];
   
   return followUpIndicators.some(indicator => text.includes(indicator)) && 
-         text.split(' ').length < 10; // Short questions are likely follow-ups
+         text.split(' ').length < 10;
 }
 
+// MAIN AI-ENHANCED RESPONSE GENERATOR
 function generateChatResponse(message) {
   const normalized = normalizeText(message);
   
-  // Simple intent detection
-  const intent = analyzeIntent(normalized);
-  const matchedService = findMatchingService(normalized);
+  // Use AI for intent analysis and search
+  const aiAnalysis = AI.analyzeIntentWithAI(normalized);
+  const fallbackIntent = analyzeIntent(normalized);
+  
+  // Use AI results if confidence is high enough
+  const useAI = aiAnalysis.confidence > 30;
+  const intent = useAI ? aiAnalysis.primary : fallbackIntent;
+  
+  console.log('AI Analysis:', aiAnalysis, 'Using AI:', useAI);
   
   // Handle follow-up questions first
   if (chatContext.expectingFollowUp && isFollowUpQuestion(normalized)) {
     chatContext.expectingFollowUp = false;
     
-    if (chatContext.lastTopic === 'services' && intent === 'pricing') {
-      return "All our service prices are listed on the booking page. Prices start from the amounts shown but may vary based on complexity and design requirements.";
-    }
-    
-    if (chatContext.lastTopic === 'booking' && normalized.match(/cancel|change|reschedule/)) {
-      chatContext.lastTopic = 'reschedule';
-      return CHATBOT_CONFIG.policies.reschedule;
+    if (useAI && aiAnalysis.searchResults.length > 0) {
+      return AI.generateIntelligentResponse(normalized, aiAnalysis.searchResults);
     }
   }
   
-  // Location and contact info
-  if (intent === 'location' || normalized.match(/where|location|address|direction|find/)) {
-    chatContext.lastTopic = 'location';
-    return `We're located at:\n\n${CHATBOT_CONFIG.location}\n\nPhone: ${CHATBOT_CONFIG.phone}`;
+  // AI-Generated responses for high-confidence matches
+  if (useAI && aiAnalysis.searchResults.length > 0) {
+    chatContext.lastTopic = intent;
+    const aiResponse = AI.generateIntelligentResponse(normalized, aiAnalysis.searchResults);
+    if (aiResponse) {
+      chatContext.expectingFollowUp = true;
+      return aiResponse;
+    }
   }
   
-  if (intent === 'contact' || normalized.match(/phone|call|contact|number|reach/)) {
-    chatContext.lastTopic = 'contact';
-    return `You can contact us at:\n\nPhone: ${CHATBOT_CONFIG.phone}\nLocation: ${CHATBOT_CONFIG.location}`;
-  }
+  // Fallback to rule-based responses
   
   // Greeting responses
   if (normalized.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
@@ -2384,112 +2682,14 @@ function generateChatResponse(message) {
     return `Hello! Welcome to ${CHATBOT_CONFIG.businessName}! How can I assist you today?`;
   }
   
-  // Inspiration images
-  if (normalized.match(/inspo|inspiration|picture|image|photo|send.*pic/)) {
-    chatContext.lastTopic = 'inspo';
-    return CHATBOT_CONFIG.policies.inspoImages;
-  }
-  
-  // Rescheduling
-  if (normalized.match(/reschedule|change.*appointment|move.*appointment/)) {
-    chatContext.lastTopic = 'reschedule';
-    return CHATBOT_CONFIG.policies.reschedule;
-  }
-  
-  // Discounts
-  if (normalized.match(/discount|deal|recurring|regular|loyal/)) {
-    chatContext.lastTopic = 'discount';
-    return CHATBOT_CONFIG.policies.discounts;
-  }
-  
-  // Opening hours
-  if ((intent === 'hours' || normalized.match(/hours|open|close|time.*open/)) && !matchedService) {
-    chatContext.lastTopic = 'hours';
-    chatContext.expectingFollowUp = true;
-    let hoursText = `Here are our opening hours:\n\n`;
-    Object.entries(CHATBOT_CONFIG.openingHours).forEach(([day, hours]) => {
-      hoursText += `${day}: ${hours}\n`;
-    });
-    return hoursText;
-  }
-  
-  // Specific service responses
-  if (matchedService) {
-    chatContext.lastService = matchedService;
-    
-    if (intent === 'duration' || normalized.match(/long|duration|time.*take/)) {
-      chatContext.lastTopic = 'duration';
-      chatContext.expectingFollowUp = true;
-      return `${matchedService.name} takes approximately ${matchedService.duration}.`;
-    }
-    
-    if (intent === 'pricing' || normalized.match(/price|cost|much/)) {
-      chatContext.lastTopic = 'pricing';
-      chatContext.expectingFollowUp = true;
-      return `${matchedService.name} starts at ${matchedService.price}. Prices may vary based on complexity and are subject to change.`;
-    }
-    
-    // General service info if no specific intent
-    chatContext.lastTopic = 'services';
-    chatContext.expectingFollowUp = true;
-    return `${matchedService.name} - ${matchedService.price} (takes ${matchedService.duration}). Would you like to know more about booking this service?`;
-  }
-  
-  // Social media
-  if (intent === 'social' || normalized.match(/instagram|insta|tiktok|social/)) {
-    chatContext.lastTopic = 'social';
-    return `Follow us on social media!\n\nInstagram: ${CHATBOT_CONFIG.socialMedia.instagram}\nTikTok: ${CHATBOT_CONFIG.socialMedia.tiktok}\n\nSee our latest nail art and get inspired!`;
-  }
-  
-  // General services (when no specific service matched)
-  if (intent === 'services' || (normalized.match(/service|nail|manicure|pedicure|acrylic|gel/) && !matchedService)) {
-    chatContext.lastTopic = 'services';
-    chatContext.expectingFollowUp = true;
-    
-    let serviceText = `Here are our main services:\n\n`;
-    
-    Object.entries(CHATBOT_CONFIG.services).forEach(([category, services]) => {
-      serviceText += `${category}:\n`;
-      services.slice(0, 3).forEach(service => {
-        serviceText += `• ${service.name} - ${service.price} (${service.duration})\n`;
-      });
-      serviceText += `\n`;
-    });
-    
-    serviceText += `Prices may vary based on complexity and are subject to change.`;
-    return serviceText;
-  }
-  
-  // Website guidance
-  if (intent === 'booking' || normalized.match(/book|appointment/)) {
-    chatContext.lastTopic = 'booking';
-    chatContext.expectingFollowUp = true;
-    return `To book an appointment:\n\n1. Click the menu button (☰) at top left\n2. Select "📅 BOOKING"\n3. Fill in your details and pick your services\n4. Choose your preferred date and time\n\nYou'll need to create an account or log in to complete your booking.`;
-  }
-  
-  if (normalized.match(/past booking|my booking|check booking/)) {
-    chatContext.lastTopic = 'mybookings';
-    return `To check your past bookings:\n\n1. Click the menu button (☰) at top left\n2. Select "MY BOOKINGS"\n3. You'll see your last 5 appointments and payment status\n\nYou need to be logged in to view your bookings.`;
-  }
-  
-  if (normalized.match(/payment|bank|transfer|pay/)) {
-    chatContext.lastTopic = 'payment';
-    return `For payment information:\n\n1. Click the menu button (☰) at top left\n2. Select "PAYMENT INFO"\n3. You'll see our bank transfer details\n\nAlways use your Booking # as the payment reference.`;
-  }
-  
-  if (normalized.match(/login|account|sign in/)) {
-    chatContext.lastTopic = 'login';
-    return `You'll be prompted to login or create an account when you try to book an appointment or submit a review. This helps us keep track of your bookings and preferences.`;
-  }
-  
   // Thank you/goodbye
   if (normalized.match(/(thank|thanks|bye|goodbye)/)) {
-    chatContext = { lastTopic: null, lastService: null, expectingFollowUp: false };
+    chatContext = { lastTopic: null, lastService: null, expectingFollowUp: false, conversationHistory: [] };
     return `You're welcome! Thanks for choosing ${CHATBOT_CONFIG.businessName}! Have a beautiful day!`;
   }
   
   // Contextual responses for unclear messages
-  if (chatContext.lastTopic) {
+  if (chatContext.lastTopic && !useAI) {
     let contextualResponse = "";
     switch (chatContext.lastTopic) {
       case 'services':
@@ -2517,7 +2717,7 @@ function generateChatResponse(message) {
   ];
   
   return reasonedDefaults[Math.floor(Math.random() * reasonedDefaults.length)];
-}
+  }
   </script>
 </body>
 </html>
