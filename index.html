@@ -643,7 +643,16 @@
 </div>
 
 
+<!-- Chat Widget -->
+<button id="chat-btn" style="position: fixed; bottom: 20px; right: 20px; background-color: #61134A; color: white; border: none; padding: 10px 15px; border-radius: 25px; cursor: pointer; z-index: 999; font-weight: bold;">💬 Chat</button>
 
+<div id="chat-widget" style="display: none; position: fixed; bottom: 70px; right: 20px; width: 300px; height: 400px; z-index: 1000; background: white; border: 2px solid #61134A; border-radius: 10px; overflow: hidden;">
+  <div style="background: #61134A; color: white; padding: 10px; text-align: center; font-weight: bold;">
+    Customer Support
+    <span onclick="document.getElementById('chat-widget').style.display='none'" style="float: right; cursor: pointer;">×</span>
+  </div>
+  <iframe src="https://huggingface.co/spaces/WebVtec/nails-by-navia-bot?embed=true" style="width:100%; height:calc(100% - 40px); border: none;"></iframe>
+</div>
 
 <!-- ✅ Scripts -->
 <script>
@@ -1876,17 +1885,19 @@ function getSelectedServices() {
 }
 
 
-<button id="chat-btn">Chat</button>
-<div id="chat-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 300px; height: 400px; z-index: 1000;">
-  <iframe src="https://huggingface.co/spaces/WebVtec/nails-by-navia-bot?embed=true" style="width:100%; height:100%; border: none;"></iframe>
-</div>
+document.addEventListener('DOMContentLoaded', function() {
+  const chatBtn = document.getElementById("chat-btn");
+  const chatWidget = document.getElementById("chat-widget");
+  
+  if (chatBtn && chatWidget) {
+    chatBtn.addEventListener("click", function(){
+      chatWidget.style.display = (chatWidget.style.display === "none" || !chatWidget.style.display) ? "block" : "none";
+    });
+  }
+});
 
-  document.getElementById("chat-btn").addEventListener("click", function(){
-    const w = document.getElementById("chat-widget");
-    w.style.display = (w.style.display === "none" ? "block" : "none");
-  });
-
-
+    
+</script>
   </script>
 </body>
 </html>
