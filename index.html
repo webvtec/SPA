@@ -1930,7 +1930,6 @@ async function sendMessage() {
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  // Show user message in chat
   const chatBox = document.getElementById("chat-messages");
   chatBox.innerHTML += `<div style="margin:5px 0; text-align:right;">
                           <b>You:</b> ${userMessage}
@@ -1938,15 +1937,14 @@ async function sendMessage() {
   input.value = "";
 
   try {
-    const res = await fetch("/api/chat", {
+    const res = await fetch("https://your-deployment-url.com/api/chat", {  // ✅ point to your backend
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: userMessage })   // ✅ always send `inputs`
+      body: JSON.stringify({ inputs: userMessage }) // ✅ always send "inputs"
     });
 
     const data = await res.json();
 
-    // Hugging Face responses sometimes come as array of objects
     let botReply = "";
     if (Array.isArray(data) && data[0]?.generated_text) {
       botReply = data[0].generated_text;
@@ -1966,6 +1964,7 @@ async function sendMessage() {
                           </div>`;
   }
 }
+
 
     
 </script>
