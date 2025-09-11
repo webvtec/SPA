@@ -11,23 +11,30 @@ def respond(
     top_p,
 ):
     """
-    Updated respond function without OAuth requirement
+    Respond function with proper error handling
     """
-    # Use your HF token from environment variable or hardcode it (not recommended for production)
-    hf_token = os.getenv("HF_TOKEN")  # Set this in your Space secrets
+    # Use environment variable for HF token
+    hf_token = os.getenv("HF_TOKEN")
     
     if not hf_token:
-        return "Error: Hugging Face token not configured"
+        yield "❌ Error: Please set HF_TOKEN in your Space secrets"
+        return
     
-    client = InferenceClient(token=hf_token, model="openai/gpt-oss-20b")
-
-    messages = [{"role": "system", "content": system_message}]
-    messages.extend(history)
-    messages.append({"role": "user", "content": message})
-
-    response = ""
-
     try:
+        client = InferenceClient(token=hf_token, model="microsoft/DialoGPT-medium")
+        
+        messages = [{"role": "system", "content": system_message}]
+        
+        # Add conversation history
+        for msg in history:
+            messages.append(msg)
+        
+        # Add current message
+        messages.append({"role": "user", "content": message})
+        
+        response = ""
+        
+        # Try to get streaming response
         for message_chunk in client.chat_completion(
             messages,
             max_tokens=max_tokens,
@@ -35,37 +42,63 @@ def respond(
             temperature=temperature,
             top_p=top_p,
         ):
-            choices = message_chunk.choices
-            token = ""
-            if len(choices) and choices[0].delta.content:
-                token = choices[0].delta.content
-
-            response += token
-            yield response
+            if hasattr(message_chunk, 'choices') and len(message_chunk.choices) > 0:
+                delta = message_chunk.choices[0].delta
+                if hasattr(delta, 'content') and delta.content:
+                    response += delta.content
+                    yield response
+                    
     except Exception as e:
-        yield f"Error: {str(e)}"
+        yield f"❌ Error: {str(e)}"
 
-# Create the ChatInterface
-chatbot = gr.ChatInterface(
-    respond,
+# Create the ChatInterface with API enabled
+demo = gr.ChatInterface(
+    fn=respond,
     type="messages",
+    title="💅 Nails by Navia Bot",
+    description="Your personal nail art and beauty assistant!",
     additional_inputs=[
-        gr.Textbox(value="You are a friendly Chatbot.", label="System message"),
-        gr.Slider(minimum=1, maximum=2048, value=512, step=1, label="Max new tokens"),
-        gr.Slider(minimum=0.1, maximum=4.0, value=0.7, step=0.1, label="Temperature"),
+        gr.Textbox(
+            value="You are Navia, a friendly and knowledgeable nail art specialist. Help users with nail care, design ideas, and beauty tips. Be creative and enthusiastic!",
+            label="System Message",
+            lines=3
+        ),
+        gr.Slider(
+            minimum=1,
+            maximum=1000,
+            value=512,
+            step=1,
+            label="Max Tokens"
+        ),
+        gr.Slider(
+            minimum=0.1,
+            maximum=2.0,
+            value=0.7,
+            step=0.1,
+            label="Temperature"
+        ),
         gr.Slider(
             minimum=0.1,
             maximum=1.0,
             value=0.95,
             step=0.05,
-            label="Top-p (nucleus sampling)",
+            label="Top-p"
         ),
     ],
+    examples=[
+        "What are some trendy nail colors for fall?",
+        "How can I make my manicure last longer?",
+        "Show me some easy nail art ideas for beginners",
+        "What's the best way to care for my cuticles?"
+    ]
 )
 
-# Create the main app interface
-with gr.Blocks(title="Nails by Navia Bot") as demo:
-    chatbot.render()
-
+# IMPORTANT: Launch with API enabled
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(
+        share=False,
+        show_api=True,  # This enables the API
+        server_name="0.0.0.0",  # Allow external connections
+        server_port=7860,
+        debug=True  # Enable debug mode
+    )
