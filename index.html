@@ -2074,11 +2074,71 @@ function getSelectedServices() {
 
   
 
+// Replace with your actual HF Space URL (without the .hf.space part)
+const SPACE_URL = "https://huggingface.co/spaces/WebVtec/nails-by-navia-bot";
+
 const chat = document.getElementById("chat");
 const input = document.getElementById("message");
 
-// Replace with your actual HF Space endpoint
-const API_ENDPOINT = "https://WebVtec-nails-by-navia-bot.hf.space/api/predict/";
+async function callGradioAPI(text) {
+  try {
+    // Step 1: Make POST request to initiate prediction
+    const postResponse = await fetch(`${SPACE_URL}/call/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [text] })
+    });
+
+    if (!postResponse.ok) {
+      throw new Error(`POST failed: ${postResponse.status} ${postResponse.statusText}`);
+    }
+
+    const postResult = await postResponse.json();
+    const eventId = postResult.event_id;
+
+    if (!eventId) {
+      throw new Error("No event_id received from server");
+    }
+
+    // Step 2: Make GET request to fetch results
+    const getResponse = await fetch(`${SPACE_URL}/call/predict/${eventId}`);
+    
+    if (!getResponse.ok) {
+      throw new Error(`GET failed: ${getResponse.status} ${getResponse.statusText}`);
+    }
+
+    // Parse the streaming response
+    const reader = getResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let result = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (Array.isArray(data) && data.length > 0) {
+              result = data[0];
+            }
+          } catch (e) {
+            // Skip invalid JSON lines
+          }
+        }
+      }
+    }
+
+    return result || "No response received";
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
+}
 
 async function sendMessage() {
   const text = input.value.trim();
@@ -2091,21 +2151,10 @@ async function sendMessage() {
   const botMsg = appendMessage("...", "bot");
 
   try {
-    const response = await fetch(API_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    botMsg.textContent = result.data[0];
+    const reply = await callGradioAPI(text);
+    botMsg.textContent = reply;
   } catch (err) {
     botMsg.textContent = `Error: ${err.message}`;
-    console.error("API Error:", err);
   }
 }
 
@@ -2164,34 +2213,15 @@ async function sendChatbotMessage() {
     document.getElementById("chatbotMessages").scrollHeight;
 
   try {
-    const response = await fetch(API_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [text] })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log("DEBUG result:", result);
-
-    if (!result || !result.data || !result.data[0]) {
-      throw new Error("Unexpected API response format: " + JSON.stringify(result));
-    }
-
-    const reply = result.data[0];
+    const reply = await callGradioAPI(text);
     typing.remove();
     appendChatMessage("bot", reply);
-
   } catch (error) {
     typing.remove();
     appendChatMessage("bot", `⚠️ Error: ${error.message}`);
     console.error("Chatbot error:", error);
   }
 }
-
     
   </script>
 </body>
