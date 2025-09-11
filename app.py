@@ -4,12 +4,12 @@ from transformers import pipeline
 # Load a lightweight model
 pipe = pipeline("text-generation", model="microsoft/phi-3-mini-4k-instruct")
 
-def chat_api(message, history=[]):
+def chat_api(message):
     """
     message: user input
-    history: list of past (user, bot) messages, optional
+    Returns a single string (not a list)
     """
-    # Build the prompt (keep lightweight, no big histories)
+    # Build the prompt
     prompt = f"User: {message}\nAssistant:"
     response = pipe(
         prompt,
@@ -22,8 +22,8 @@ def chat_api(message, history=[]):
     # Extract only the assistant's part
     reply = response.split("Assistant:")[-1].strip()
 
-    # ✅ Gradio expects a list/tuple if outputs="text"
-    return [reply]
+    # ✅ Return just the reply string, not a list
+    return reply
 
 # Gradio app: exposes an API but no heavy UI
 demo = gr.Interface(
