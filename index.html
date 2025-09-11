@@ -2074,15 +2074,31 @@ function getSelectedServices() {
 
   
 
-// Replace with your actual HF Space URL (without the .hf.space part)
+// Most likely correct URL based on your Space name
 const SPACE_URL = "https://webvtec-nails-by-navia-bot.hf.space";
 
 const chat = document.getElementById("chat");
 const input = document.getElementById("message");
 
 async function callGradioAPI(text) {
+  // Try the simple API format first
   try {
-    // Step 1: Make POST request to initiate prediction
+    const response = await fetch(`${SPACE_URL}/api/predict`, {
+      method: "POST", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [text] })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return result.data[0] || "No response";
+    }
+  } catch (error) {
+    console.log("Simple API failed, trying advanced API...");
+  }
+
+  // If that fails, try the two-step API
+  try {
     const postResponse = await fetch(`${SPACE_URL}/call/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2100,14 +2116,12 @@ async function callGradioAPI(text) {
       throw new Error("No event_id received from server");
     }
 
-    // Step 2: Make GET request to fetch results
     const getResponse = await fetch(`${SPACE_URL}/call/predict/${eventId}`);
     
     if (!getResponse.ok) {
       throw new Error(`GET failed: ${getResponse.status} ${getResponse.statusText}`);
     }
 
-    // Parse the streaming response
     const reader = getResponse.body.getReader();
     const decoder = new TextDecoder();
     let result = "";
@@ -2135,7 +2149,7 @@ async function callGradioAPI(text) {
 
     return result || "No response received";
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("Both API methods failed:", error);
     throw error;
   }
 }
