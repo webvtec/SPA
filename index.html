@@ -1939,10 +1939,18 @@ async function sendMessage() {
   try {
     // ✅ Correct API route
     const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: userMessage }),
-    });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ inputs: userMessage }),
+});
+
+let data;
+try {
+  data = await res.json(); // will now succeed
+} catch {
+  data = { error: "Server did not return valid JSON" };
+}
+
 
     // Always read text first, then try parsing JSON
     const text = await res.text();
