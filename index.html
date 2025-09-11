@@ -2075,45 +2075,52 @@ function getSelectedServices() {
   
 
 const chat = document.getElementById("chat");
-    const input = document.getElementById("message");
+const input = document.getElementById("message");
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
+// Replace with your actual HF Space endpoint
+const API_ENDPOINT = "https://WebVtec-nails-by-navia-bot.hf.space/api/predict/";
 
-      appendMessage(text, "user");
-      input.value = "";
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
 
-      // Show a "typing..." placeholder
-      const botMsg = appendMessage("...", "bot");
+  appendMessage(text, "user");
+  input.value = "";
 
-      try {
-        // Replace with your actual HF Space endpoint
-        const response = await fetch("https://huggingface.co/spaces/<username>/<space-name>/api/predict/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: [text] })
-        });
-        const result = await response.json();
-        botMsg.textContent = result.data[0];
-      } catch (err) {
-        botMsg.textContent = "Error: Could not reach backend.";
-      }
-    }
+  // Show a "typing..." placeholder
+  const botMsg = appendMessage("...", "bot");
 
-    function appendMessage(text, sender) {
-      const div = document.createElement("div");
-      div.className = "msg " + sender;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-      return div;
-    }
-
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") sendMessage();
+  try {
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [text] })
     });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    botMsg.textContent = result.data[0];
+  } catch (err) {
+    botMsg.textContent = `Error: ${err.message}`;
+    console.error("API Error:", err);
+  }
+}
 
+function appendMessage(text, sender) {
+  const div = document.createElement("div");
+  div.className = "msg " + sender;
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendMessage();
+});
 
 let chatbotOpen = false;
 
@@ -2157,17 +2164,12 @@ async function sendChatbotMessage() {
     document.getElementById("chatbotMessages").scrollHeight;
 
   try {
-    // ✅ Hugging Face API endpoint
-    const response = await fetch(
-      "https://WebVtec-nails-by-navia-bot.hf.space/run/predict",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: [text] })
-      }
-    );
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [text] })
+    });
 
-    // If server itself failed
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
@@ -2175,7 +2177,6 @@ async function sendChatbotMessage() {
     const result = await response.json();
     console.log("DEBUG result:", result);
 
-    // Check if API returned a proper bot reply
     if (!result || !result.data || !result.data[0]) {
       throw new Error("Unexpected API response format: " + JSON.stringify(result));
     }
