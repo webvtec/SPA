@@ -1937,7 +1937,7 @@ async function sendMessage() {
   input.value = "";
 
   try {
-    const res = await fetch("https://your-deployment-url.com/api/chat", {  // ✅ point to your backend
+    const res = await fetch("https://spa-ruddy-beta.vercel.app/chat", {  // ✅ point to your backend
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inputs: userMessage }) // ✅ always send "inputs"
