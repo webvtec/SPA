@@ -1,4 +1,8 @@
+// api/chat.js
+import fetch from "node-fetch"; // make sure node-fetch is installed
+
 export default async function handler(req, res) {
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -6,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    // Read the request body manually
+    // Read request body manually
     let body = "";
     req.on("data", chunk => { body += chunk.toString(); });
     await new Promise(resolve => req.on("end", resolve));
@@ -14,7 +18,7 @@ export default async function handler(req, res) {
     const { inputs } = JSON.parse(body);
 
     // Call Hugging Face
-    const response = await fetch(
+    const hfResponse = await fetch(
       "https://api-inference.huggingface.co/models/WebVtec/nails-by-navia-bot",
       {
         method: "POST",
@@ -26,7 +30,9 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
+    const data = await hfResponse.json();
+
+    // Send JSON response
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
 
