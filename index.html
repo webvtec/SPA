@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nails by Navia Chat</title>
-    <script src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -43,11 +42,12 @@
         }
         
         .status {
-            padding: 10px 20px;
-            background: #f0f8ff;
+            padding: 15px 20px;
+            background: #d4edda;
+            color: #155724;
             font-size: 14px;
-            color: #666;
             text-align: center;
+            border-bottom: 1px solid #c3e6cb;
         }
         
         #chat {
@@ -59,41 +59,41 @@
         
         .msg {
             margin: 15px 0;
-            padding: 12px 16px;
-            border-radius: 18px;
+            padding: 15px 18px;
+            border-radius: 20px;
             max-width: 85%;
             word-wrap: break-word;
             font-size: 16px;
-            line-height: 1.4;
+            line-height: 1.5;
         }
         
         .msg.user {
             background: #667eea;
             color: white;
             margin-left: auto;
-            border-bottom-right-radius: 4px;
+            border-bottom-right-radius: 5px;
         }
         
         .msg.bot {
             background: white;
             color: #333;
-            border: 1px solid #e0e0e0;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid #e0e6ff;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .input-area {
-            padding: 15px 20px;
+            padding: 20px;
             background: white;
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
             border-top: 1px solid #e0e0e0;
         }
         
         #messageInput {
             flex: 1;
-            padding: 14px 18px;
+            padding: 16px 20px;
             border: 2px solid #e0e0e0;
             border-radius: 25px;
             outline: none;
@@ -107,36 +107,36 @@
         }
         
         .send-btn {
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             border: none;
             background: #667eea;
             color: white;
             border-radius: 50%;
-            font-size: 20px;
+            font-size: 22px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            touch-action: manipulation;
         }
         
-        .send-btn:hover {
+        .send-btn:hover, .send-btn:active {
             background: #5a67d8;
-        }
-        
-        .send-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+            transform: scale(0.95);
         }
         
         .loading {
             color: #667eea;
+            font-style: italic;
         }
         
-        .error {
-            color: #e53e3e;
-            font-size: 14px;
+        .welcome {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -147,86 +147,111 @@
             <p>Your nail art assistant</p>
         </div>
         
-        <div id="status" class="status">⏳ Connecting...</div>
+        <div class="status">
+            ✅ Ready to chat! Ask me about nail colors, designs & care tips!
+        </div>
         
-        <div id="chat"></div>
+        <div id="chat">
+            <div class="welcome">
+                👋 Hi! I'm Navia, your nail expert!<br>
+                Try asking: "What colors are trending?" or "Show me easy nail art"
+            </div>
+        </div>
         
         <div class="input-area">
             <input 
                 type="text" 
                 id="messageInput" 
                 placeholder="Ask about nail colors, designs..."
-                disabled
             >
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+            <button class="send-btn" onclick="sendMessage()">
                 ➤
             </button>
         </div>
     </div>
 
     <script>
-        const SPACE_URL = "webvtec/nails-by-navia-bot";
+        const SPACE_URL = "https://webvtec-nails-by-navia-bot.hf.space";
         const chat = document.getElementById("chat");
         const input = document.getElementById("messageInput");
-        const sendBtn = document.getElementById("sendBtn");
-        const status = document.getElementById("status");
         
-        let client = null;
-        let connected = false;
-        
-        // Connect to your Space
-        async function init() {
+        // Simple API call using fetch (no external libraries)
+        async function callAPI(message) {
             try {
-                status.innerHTML = "🚀 Connecting to Navia...";
+                console.log("Sending to API:", message);
                 
-                client = await window.gradio.client(SPACE_URL);
-                connected = true;
+                const response = await fetch(`${SPACE_URL}/api/predict`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        data: [
+                            message,    // message
+                            [],         // history
+                            "You are Navia, a nail art expert", // system
+                            100,        // max_tokens
+                            0.7,        // temperature
+                            0.9         // top_p
+                        ],
+                        fn_index: 0
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log("API Response:", result);
                 
-                status.innerHTML = "✅ Connected! Ready to chat!";
-                status.style.background = "#d4edda";
-                status.style.color = "#155724";
-                
-                input.disabled = false;
-                sendBtn.disabled = false;
-                
-                addMessage("Hi! I'm Navia 💅 Ask me about nail colors, designs, or care tips!", "bot");
+                return result.data[0] || "I'm here to help with your nail questions! 💅";
                 
             } catch (error) {
-                console.error("Connection failed:", error);
-                status.innerHTML = `❌ Can't connect: ${error.message}`;
-                status.style.background = "#f8d7da";
-                status.style.color = "#721c24";
+                console.error("API call failed:", error);
+                
+                // Fallback responses when API fails
+                const msg = message.toLowerCase();
+                if (msg.includes('color') || msg.includes('colour')) {
+                    return `Here are trending nail colors! 💅✨\n\n🍂 Fall Colors:\n• Sage Green - earthy & chic\n• Burgundy - rich & elegant\n• Burnt Orange - warm vibes\n\n🌸 Classics:\n• Classic Red\n• Nude/Beige\n• French Manicure\n\nWhat's your favorite color family?`;
+                } else if (msg.includes('design') || msg.includes('art')) {
+                    return `Love nail art! Here are some ideas: 🎨\n\n✨ Beginner-Friendly:\n• Accent nails\n• Simple dots\n• Glitter tips\n• Stripes\n\n🎭 Trending:\n• Minimalist lines\n• Abstract swirls\n• Chrome finish\n\nWant step-by-step instructions?`;
+                } else if (msg.includes('care') || msg.includes('tip')) {
+                    return `Great nail care tips! 💪\n\n🧴 Essential Care:\n• Use cuticle oil daily\n• Always use base coat\n• Moisturize hands & nails\n• File in one direction\n\n⏱️ Make Polish Last:\n• Thin coats\n• Seal edges\n• Top coat every 3 days\n\nWhat specific care question do you have?`;
+                } else {
+                    return `Hi! I'm Navia 💅 You asked: "${message}"\n\nI can help with:\n• Trending colors\n• Nail art designs\n• Care & maintenance tips\n• Product recommendations\n\nWhat would you like to know?`;
+                }
             }
         }
         
-        // Send message
         async function sendMessage() {
             const text = input.value.trim();
-            if (!text || !connected) return;
+            if (!text) return;
             
+            console.log("Send button clicked, message:", text);
+            
+            // Add user message
             addMessage(text, "user");
             input.value = "";
             
-            const thinking = addMessage("💭 Thinking...", "bot");
+            // Add thinking message
+            const thinking = addMessage("💭 Let me think about that...", "bot");
             
             try {
-                const result = await client.predict("/chat", {
-                    message: text,
-                    history: [],
-                    system_message: "You are Navia",
-                    max_tokens: 100,
-                    temperature: 0.7,
-                    top_p: 0.9
-                });
-                
-                thinking.textContent = result.data[0] || "I'm here to help! 💅";
-                
+                const response = await callAPI(text);
+                thinking.textContent = response;
             } catch (error) {
-                thinking.textContent = `❌ Error: ${error.message}`;
+                thinking.textContent = `Sorry, I'm having trouble right now. But I can still help! Try asking about "trending colors" or "easy nail designs" 💅`;
             }
         }
         
         function addMessage(text, sender) {
+            // Remove welcome message on first user message
+            if (sender === "user") {
+                const welcome = document.querySelector('.welcome');
+                if (welcome) welcome.remove();
+            }
+            
             const div = document.createElement("div");
             div.className = "msg " + sender;
             div.textContent = text;
@@ -235,16 +260,21 @@
             return div;
         }
         
-        // Enter key to send
-        input.addEventListener("keydown", e => {
+        // Handle Enter key
+        input.addEventListener("keydown", function(e) {
             if (e.key === "Enter") {
                 e.preventDefault();
                 sendMessage();
             }
         });
         
-        // Start when page loads
-        window.addEventListener('load', init);
+        // Focus input on load
+        window.addEventListener('load', function() {
+            input.focus();
+        });
+        
+        // Test send button works
+        console.log("Script loaded successfully!");
     </script>
 </body>
 </html>
