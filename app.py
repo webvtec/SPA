@@ -1,4 +1,3 @@
-# app.py
 import gradio as gr
 from transformers import pipeline
 
@@ -22,7 +21,9 @@ def chat_api(message, history=[]):
 
     # Extract only the assistant's part
     reply = response.split("Assistant:")[-1].strip()
-    return reply
+
+    # ✅ Gradio expects a list/tuple if outputs="text"
+    return [reply]
 
 # Gradio app: exposes an API but no heavy UI
 demo = gr.Interface(
