@@ -2076,8 +2076,8 @@ function getSelectedServices() {
 
 const SPACE_URL = "https://webvtec-nails-by-navia-bot.hf.space";
 
-const chat = document.getElementById("chat");
-const input = document.getElementById("message");
+const chatContainer = document.getElementById("chatbotMessages");
+const input = document.getElementById("chatbotInput");
 
 // -------------------------------
 // API CALLS
@@ -2086,18 +2086,12 @@ const input = document.getElementById("message");
 // Normal (non-streaming) call
 async function callGradioAPI(text) {
     try {
-        console.log("Calling API with message:", text);
-
         const response = await fetch(`${SPACE_URL}/chat/completions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 messages: [
-                    {
-                        role: "system",
-                        content:
-                            "You are a friendly and helpful nail art specialist named Navia. Help users with nail care, designs, and beauty tips."
-                    },
+                    { role: "system", content: "You are a friendly and helpful nail art specialist named Navia. Help users with nail care, designs, and beauty tips." },
                     { role: "user", content: text }
                 ],
                 max_tokens: 512,
@@ -2112,8 +2106,6 @@ async function callGradioAPI(text) {
         }
 
         const result = await response.json();
-        console.log("API result:", result);
-
         return result?.choices?.[0]?.message?.content || "No response from Navia.";
     } catch (error) {
         console.error("API call failed:", error);
@@ -2121,162 +2113,108 @@ async function callGradioAPI(text) {
     }
 }
 
-// Streaming call (typing effect)
-async function tryStreamingAPI(text, onDelta) {
-    console.log("Trying streaming API...");
+// -------------------------------
+// CHATBOT FUNCTIONS
+// -------------------------------
 
-    const response = await fetch(`${SPACE_URL}/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            messages: [
-                {
-                    role: "system",
-                    content: "You are Navia, a nail art specialist."
-                },
-                { role: "user", content: text }
-            ],
-            max_tokens: 512,
-            temperature: 0.7,
-            top_p: 0.95,
-            stream: true
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`Streaming API failed: ${response.status}`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let finalResult = "";
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-            if (line.startsWith("data: ")) {
-                if (line.trim() === "data: [DONE]") continue;
-
-                try {
-                    const data = JSON.parse(line.slice(6));
-                    const delta = data?.choices?.[0]?.delta?.content;
-                    if (delta) {
-                        finalResult += delta;
-                        if (onDelta) onDelta(finalResult);
-                    }
-                } catch (e) {
-                    // ignore bad JSON chunks
-                }
-            }
-        }
-    }
-
-    return finalResult || "Streaming completed but no response received.";
+// Append message to widget
+function appendChatMessage(sender, text) {
+    if (!chatContainer) return;
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "chatbot-message " + sender;
+    msgDiv.innerHTML = `<div class="message-content">${text}</div>`;
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return msgDiv;
 }
 
-// -------------------------------
-// CHAT UI FUNCTIONS
-// -------------------------------
-
-async function sendMessage() {
+// Send message
+async function sendChatbotMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    appendMessage(text, "user");
+    appendChatMessage("user", text);
     input.value = "";
 
-    // Show loading placeholder
-    const botMsg = appendMessage("💅 Thinking about your nails...", "bot");
+    // Show typing indicator
+    const typing = document.createElement("div");
+    typing.className = "chatbot-message bot";
+    typing.innerHTML = `
+        <div class="chatbot-typing">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>`;
+    chatContainer.appendChild(typing);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 
     try {
-        // Try streaming first
-        let finalReply = "";
-        await tryStreamingAPI(text, (partial) => {
-            botMsg.textContent = partial; // live update
-            finalReply = partial;
-        });
-
-        if (!finalReply) {
-            // fallback to normal call
-            const reply = await callGradioAPI(text);
-            botMsg.textContent = reply;
-        }
-    } catch (err) {
-        botMsg.innerHTML = `❌ <strong>Connection Error:</strong> ${err.message}<br><br>
-        <small>Your Space is running at <a href="${SPACE_URL}" target="_blank">${SPACE_URL}</a></small>`;
-        console.error("Send message error:", err);
+        const reply = await callGradioAPI(text);
+        typing.remove();
+        appendChatMessage("bot", reply);
+    } catch (error) {
+        typing.remove();
+        appendChatMessage("bot", `❌ Connection error: ${error.message}`);
+        console.error("Chatbot error:", error);
     }
 }
 
-function appendMessage(text, sender) {
-    const div = document.createElement("div");
-    div.className = "msg " + sender;
-    div.textContent = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-    return div;
+// Toggle chatbot window (open/close)
+function toggleChatbot() {
+    const window = document.getElementById("chatbotWindow");
+    if (!window) return;
+    const display = window.style.display;
+    window.style.display = (display === "flex" || display === "block") ? "none" : "flex";
 }
 
 // -------------------------------
 // EVENT LISTENERS
 // -------------------------------
 
-input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        sendMessage();
-    }
-});
-
-// -------------------------------
-// PAGE INIT
-// -------------------------------
-
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("🚀 Page loaded, ready to connect to your Space!");
-    console.log("Space URL:", SPACE_URL);
-});
-
-
-
-// Enter key
+// Enter key inside input
 if (input) {
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            sendMessage();
+            sendChatbotMessage();
         }
     });
 }
 
-// Send button
-const sendBtn = document.getElementById("sendBtn");
-if (sendBtn) {
-    sendBtn.addEventListener("click", () => {
-        sendMessage();
-    });
+// -------------------------------
+// TYPING DOTS CSS
+// -------------------------------
+const style = document.createElement("style");
+style.textContent = `
+.chatbot-typing {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
 }
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #999;
+    animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0s; }
+@keyframes typing {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+}
+`;
+document.head.appendChild(style);
 
-// Toggle button (from outside)
-function toggleChatbot() {
-    const window = document.getElementById("chatbotWindow");
-    if (!window) return;
-    window.style.display = (window.style.display === "flex") ? "none" : "flex";
-}
+// -------------------------------
+// PAGE INIT
+// -------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("🚀 Chatbot widget ready!");
+});
 
-// Close button (inside chatbot window)
-const closeBtn = document.getElementById("closeBtn");
-if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-        const window = document.getElementById("chatbotWindow");
-        if (window) window.style.display = "none";
-    });
-}
 
   </script>
 </body>
